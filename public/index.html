@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Evidence-led multi-agent interview panel." />
+    <title>Panelroom — AI interview panel</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <header class="topbar">
+        <a class="brand" href="/" aria-label="Panelroom home"><span class="brand-mark">P</span>Panelroom</a>
+        <div class="secure-note"><i></i> Evidence-led hiring decisions</div>
+      </header>
+
+      <section class="intro">
+        <p class="eyebrow">Multi-agent interview panel</p>
+        <h1>Get the whole room,<br /><em>not one opinion.</em></h1>
+        <p class="lede">Turn a resume and interview transcript into an evidence-backed panel discussion—with independent reviewers, direct challenge, and a reasoned hiring decision.</p>
+      </section>
+
+      <section class="workspace" aria-label="Candidate material">
+        <div class="section-heading"><span>01</span><div><h2>Set the brief</h2><p>Everything the panel sees is shown here.</p></div></div>
+        <div class="input-grid">
+          <label class="field role-field"><span>Target role</span><input id="role" placeholder="e.g. Senior Product Designer" autocomplete="off" /></label>
+          <button class="sample-button" id="load-sample" type="button">Load a sample candidate <span>↗</span></button>
+        </div>
+        <div class="materials-grid">
+          <label class="field material"><span>Resume <small>paste text or load .txt/.md</small></span><textarea id="resume" placeholder="Paste the candidate's resume…"></textarea><input class="file-input" data-target="resume" type="file" accept=".txt,.md,text/plain,text/markdown" /></label>
+          <label class="field material"><span>Interview transcript <small>paste text or load .txt/.md</small></span><textarea id="transcript" placeholder="Paste the interview transcript…"></textarea><input class="file-input" data-target="transcript" type="file" accept=".txt,.md,text/plain,text/markdown" /></label>
+        </div>
+        <div class="run-row"><p><b>Privacy note:</b> Your material is sent only to the configured server-side model call. It is not retained by Panelroom.</p><button id="run-panel" class="run-button" type="button">Convene the panel <span>→</span></button></div>
+      </section>
+
+      <section id="process" class="process" aria-label="How it works">
+        <div class="section-heading"><span>02</span><div><h2>How the decision is made</h2><p>Independent judgment before consensus.</p></div></div>
+        <div class="steps">
+          <article><b>01</b><h3>Build the evidence file</h3><p>Facts, skills, claims, and open questions are extracted into one shared profile.</p></article>
+          <article><b>02</b><h3>Hear every voice separately</h3><p>Four specialist calls assess the candidate without seeing each other’s conclusions.</p></article>
+          <article><b>03</b><h3>Challenge the room</h3><p>Panelists respond directly to evidence and disagreement before a hiring chair decides.</p></article>
+        </div>
+      </section>
+
+      <section id="results" class="results hidden" aria-live="polite">
+        <div class="section-heading"><span>03</span><div><h2>Panel record</h2><p id="result-subtitle">Evidence and deliberation.</p></div></div>
+        <div id="status" class="status-card"><span class="pulse"></span><span>Preparing the panel record…</span></div>
+        <div id="report"></div>
+      </section>
+    </main>
+    <template id="report-template">
+      <div class="decision-card"><div><p class="eyebrow">Final recommendation</p><h2 class="decision-label"></h2><p class="decision-rationale"></p></div><div class="confidence"><span>Confidence</span><strong></strong><div class="confidence-track"><i></i></div></div></div>
+      <div class="profile-card"><div class="profile-header"><div><p class="eyebrow">Candidate profile</p><h3 class="candidate-name"></h3></div><p class="headline"></p></div><div class="fact-columns"><div><h4>Supported skills</h4><ul class="skills-list"></ul></div><div><h4>Claims to validate</h4><ul class="claims-list"></ul></div></div></div>
+      <div class="report-section"><div class="section-title"><p class="eyebrow">Independent opinions</p><h3>Four lenses. No groupthink.</h3><p>Each opinion was generated in a separate call before the panel debate.</p></div><div class="opinion-grid"></div></div>
+      <div class="debate-card"><p class="eyebrow">Panel debate</p><h3 class="debate-summary"></h3><div class="exchange-list"></div><div class="unresolved-box"><b>Still unresolved</b><ul></ul></div></div>
+      <div class="closing-grid"><article><p class="eyebrow">Strengths</p><ul class="strengths-list"></ul></article><article><p class="eyebrow">Concerns</p><ul class="concerns-list"></ul></article><article><p class="eyebrow">Next step</p><p class="next-step"></p><div class="factors"></div></article></div>
+    </template>
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>
+
