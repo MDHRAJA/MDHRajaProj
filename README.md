@@ -16,6 +16,10 @@ For a hiring slate, add multiple candidates, set the number of open roles, and c
 
 For Gemini, the application retries temporary 500/503 capacity errors once, then automatically retries the same call with `GEMINI_FALLBACK_MODEL`. The default pair is `gemini-3.6-flash` and `gemini-3.1-flash-lite`.
 
+## Deploy to Render
+
+This repository includes `render.yaml` for a Node web service. In Render, create a new **Blueprint** from this GitHub repository and provide `GEMINI_API_KEY` when prompted. The key is marked as a secret and is never committed to GitHub or sent to the browser. Render uses `npm start` and checks `/health` before routing traffic to the service.
+
 ## Deliberation guarantee
 
 `src/interview-engine.js` intentionally calls the four persona reviews with `Promise.all`. Each call receives only the shared profile plus the source material—never another persona's conclusion. Only after they finish does the debate call receive the collected opinions, followed by a separate hiring-chair decision call.
