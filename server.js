@@ -39,8 +39,8 @@ createServer(async (req, res) => {
         provider,
         openaiApiKey: process.env.OPENAI_API_KEY,
         geminiApiKey: process.env.GEMINI_API_KEY,
-        model: provider === "gemini" ? (process.env.GEMINI_MODEL || "gemini-3.7-flash") : (process.env.OPENAI_MODEL || "gpt-4.1-mini"),
-        fallbackModel: provider === "gemini" ? (process.env.GEMINI_FALLBACK_MODEL || "gemini-2.5-flash") : null
+        model: provider === "gemini" ? (process.env.GEMINI_MODEL || "gemini-3.6-flash") : (process.env.OPENAI_MODEL || "gpt-4.1-mini"),
+        fallbackModel: provider === "gemini" ? (process.env.GEMINI_FALLBACK_MODEL || "gemini-3.1-flash-lite") : null
       });
       return send(res, 200, report);
     }
