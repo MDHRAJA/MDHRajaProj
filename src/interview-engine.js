@@ -108,10 +108,26 @@ async function independentOpinion(persona, input, profile, config) {
 }
 
 async function debate(input, profile, opinions, config) {
-  return callModel(config,
+  const initial = await callModel(config,
     `You facilitate a complete, disciplined hiring-panel debate. The independent assessments below are now visible to the group. First reconcile every material strength and concern raised by the four panelists: do not silently omit a point merely because several reviewers agree. Then produce a debate record where every material agreement and disagreement is stated with its source evidence. Each listed panelist must directly respond to a named colleague; use agree, disagree, or revise. Include at least 4 substantive exchanges and enough additional exchanges to cover every material point. If the panel has no substantive disagreement on a point, record that as an agreement rather than inventing conflict. Preserve unresolved disagreement; do not flatten it. ${evidenceRule} Return valid JSON only: {"summary":"string","agreements":[{"topic":"string","panelists":["persona id"],"evidence":"candidate quote/fact + requirement"}],"disagreements":[{"topic":"string","panelists":["persona id"],"status":"resolved|unresolved","evidence":"candidate quote/fact + requirement"}],"exchanges":[{"speaker":"persona id","responding_to":"persona id","position":"agree|disagree|revise","response":"string","evidence":"quote or fact"}],"unresolved":["string"]}.`,
     `${commonInput(input)}\n\nPROFILE:\n${JSON.stringify(profile)}\n\nINDEPENDENT OPINIONS (only now shared):\n${JSON.stringify(opinions)}`
   );
+  if (hasCompleteDebateCoverage(initial, opinions)) return initial;
+  return callModel(config,
+    `You are the debate-record auditor. Repair the incomplete panel debate below. Return a complete evidence-led record, not commentary. Requirements: every one of the four personas must speak directly to a named colleague; include at least 4 substantive exchanges; enumerate every material agreement in agreements; enumerate every material difference of view in disagreements with status resolved or unresolved; every item must cite resume/transcript or job-description evidence. Do not invent agreement or conflict unsupported by the independent opinions. ${evidenceRule} Return valid JSON only: {"summary":"string","agreements":[{"topic":"string","panelists":["persona id"],"evidence":"candidate quote/fact + requirement"}],"disagreements":[{"topic":"string","panelists":["persona id"],"status":"resolved|unresolved","evidence":"candidate quote/fact + requirement"}],"exchanges":[{"speaker":"persona id","responding_to":"persona id","position":"agree|disagree|revise","response":"string","evidence":"quote or fact"}],"unresolved":["string"]}.`,
+    `${commonInput(input)}\n\nPROFILE:\n${JSON.stringify(profile)}\n\nINDEPENDENT OPINIONS:\n${JSON.stringify(opinions)}\n\nINCOMPLETE DEBATE TO REPAIR:\n${JSON.stringify(initial)}`
+  );
+}
+
+function hasCompleteDebateCoverage(debate, opinions) {
+  const exchanges = Array.isArray(debate?.exchanges) ? debate.exchanges : [];
+  const speakers = new Set(exchanges.map(item => item?.speaker).filter(Boolean));
+  const personaIds = opinions.map(opinion => opinion.persona).filter(Boolean);
+  const hasAllSpeakers = personaIds.every(id => speakers.has(id));
+  const hasAgreement = Array.isArray(debate?.agreements) && debate.agreements.length > 0;
+  const opinionSplit = new Set(opinions.map(opinion => opinion.recommendation)).size > 1;
+  const hasRequiredDifference = !opinionSplit || (Array.isArray(debate?.disagreements) && debate.disagreements.length > 0);
+  return exchanges.length >= 4 && hasAllSpeakers && hasAgreement && hasRequiredDifference;
 }
 
 async function finalDecision(input, profile, opinions, panelDebate, config) {
