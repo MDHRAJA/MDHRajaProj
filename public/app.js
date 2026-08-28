@@ -1,5 +1,6 @@
 const $ = selector => document.querySelector(selector);
 let latestReport = null;
+let speechSession = null;
 const sample = {
   role: "Senior Product Designer",
   resume: `Alex Morgan\nProduct Designer | 7 years experience\n\nExperience\n• Lead Product Designer, Orbit Health (2021–present): Led the redesign of a clinician workflow used by 12,000 care providers. Partnered with engineering and research; reduced task completion time by 28%.\n• Product Designer, Ledgerline (2018–2021): Shipped invoicing and payment flows for small businesses.\n\nSkills\nFigma, prototyping, user research, design systems, accessibility, product strategy.\n\nEducation\nBDes, Interaction Design, 2018.`,
@@ -85,8 +86,11 @@ function renderReport(data) {
 }
 
 document.addEventListener("click", event => {
-  const action = event.target.closest("[data-action]")?.dataset.action;
-  if (action === "voice") playDebate();
+  const control = event.target.closest("[data-action]");
+  const action = control?.dataset.action;
+  if (action === "voice-play") playDebate(control);
+  if (action === "voice-pause") pauseDebate(control);
+  if (action === "voice-stop") stopDebate();
   if (action === "export") exportReport();
 });
 
@@ -151,12 +155,12 @@ function renderSlate(data) {
   const shortlist = fragment.querySelector(".shortlist-grid"); (slate.selected_candidates || []).forEach(item => { const card = document.createElement("article"); card.innerHTML = `<span>Hire-ready · rank #${item.rank}</span><h4>${escapeHtml(item.candidate_name)}</h4><p>${escapeHtml(item.rationale)}</p><b>Suggested next step</b><p>${escapeHtml(item.next_step)}</p>`; shortlist.append(card); });
   list(fragment.querySelector(".slate-risk ul"), slate.unresolved_tradeoffs); $("#report").replaceChildren(fragment);
   const verdicts = $("#report .panel-verdicts tbody"), records = $("#report .record-list");
-  data.candidates.forEach(report => {
+  data.candidates.forEach((report, reportIndex) => {
     const row = document.createElement("tr"), opinions = Object.fromEntries((report.opinions || []).map(item => [item.persona, item]));
     row.innerHTML = `<td><b>${escapeHtml(report.candidate_name)}</b><small>${escapeHtml(report.decision.role_alignment || "role fit assessed")}</small></td>${["technical", "culture", "manager", "skeptic"].map(persona => `<td>${voteMarkup(opinions[persona]?.recommendation)}</td>`).join("")}<td>${voteMarkup(report.decision.recommendation)}</td>`;
     verdicts.append(row);
     const detail = document.createElement("details"); detail.className = "interview-record";
-    detail.innerHTML = `<summary><span><b>Detailed Interview Record</b><small>${escapeHtml(report.candidate_name)} · evidence, debate, and decision</small></span><i>+</i></summary><div class="record-body"><div class="record-overview"><div><p class="eyebrow">Candidate profile</p><h4>${escapeHtml(report.profile.candidate_name || report.candidate_name)}</h4><p>${escapeHtml(report.profile.headline || "")}</p></div><div><p class="eyebrow">Final chair decision</p><h4>${escapeHtml((report.decision.recommendation || "").replaceAll("_", " "))}</h4><p>${escapeHtml(report.decision.rationale || "")}</p></div></div><div class="record-opinions"><p class="eyebrow">Independent panel opinions</p>${(report.opinions || []).map(opinion => `<article><div><b>${escapeHtml(personaName(opinion.persona))}</b><span>${escapeHtml((opinion.recommendation || "").replaceAll("_", " "))} · ${escapeHtml(String(opinion.confidence || "—"))}% confidence</span></div><p>${escapeHtml(opinion.summary || "")}</p><dl><dt>Strength evidence</dt><dd>${escapeHtml(opinion.strengths?.[0]?.evidence || "No evidence recorded")}</dd><dt>Concern evidence</dt><dd>${escapeHtml(opinion.concerns?.[0]?.evidence || "No concern recorded")}</dd></dl></article>`).join("")}</div><div class="record-debate"><p class="eyebrow">Agreement &amp; disagreement in debate</p><h4>${escapeHtml(report.debate.summary || "")}</h4>${(report.debate.exchanges || []).map(item => `<article><b>${escapeHtml(personaName(item.speaker))}</b><span>${escapeHtml(item.position)}</span><b>${escapeHtml(personaName(item.responding_to))}</b><p>${escapeHtml(item.response || "")}</p><q>${escapeHtml(item.evidence || "")}</q></article>`).join("")}<div class="record-unresolved"><b>Unresolved</b><ul>${(report.debate.unresolved || []).map(item => `<li>${escapeHtml(item)}</li>`).join("")}</ul></div></div></div>`;
+    detail.innerHTML = `<summary><span><b>Detailed Interview Record</b><small>${escapeHtml(report.candidate_name)} · evidence, debate, and decision</small></span><i>+</i></summary><div class="record-body"><div class="record-overview"><div><p class="eyebrow">Candidate profile</p><h4>${escapeHtml(report.profile.candidate_name || report.candidate_name)}</h4><p>${escapeHtml(report.profile.headline || "")}</p></div><div><p class="eyebrow">Final chair decision</p><h4>${escapeHtml((report.decision.recommendation || "").replaceAll("_", " "))}</h4><p>${escapeHtml(report.decision.rationale || "")}</p></div></div><div class="record-opinions"><p class="eyebrow">Independent panel opinions</p>${(report.opinions || []).map(opinion => `<article><div><b>${escapeHtml(personaName(opinion.persona))}</b><span>${escapeHtml((opinion.recommendation || "").replaceAll("_", " "))} · ${escapeHtml(String(opinion.confidence || "—"))}% confidence</span></div><p>${escapeHtml(opinion.summary || "")}</p><dl><dt>Strength evidence</dt><dd>${escapeHtml(opinion.strengths?.[0]?.evidence || "No evidence recorded")}</dd><dt>Concern evidence</dt><dd>${escapeHtml(opinion.concerns?.[0]?.evidence || "No concern recorded")}</dd></dl></article>`).join("")}</div><div class="record-debate"><div class="record-debate-heading"><div><p class="eyebrow">Agreement &amp; disagreement in debate</p><h4>${escapeHtml(report.debate.summary || "")}</h4></div><div class="voice-player" data-report-index="${reportIndex}"><div class="voice-controls"><button class="voice-button" type="button" data-action="voice-play">▶ Listen</button><button class="voice-secondary" type="button" data-action="voice-pause" disabled>Pause</button><button class="voice-secondary" type="button" data-action="voice-stop" disabled>Stop</button></div><p class="voice-status" aria-live="polite">Listen speaker by speaker.</p></div></div>${(report.debate.exchanges || []).map(item => `<article><b>${escapeHtml(personaName(item.speaker))}</b><span>${escapeHtml(item.position)}</span><b>${escapeHtml(personaName(item.responding_to))}</b><p>${escapeHtml(item.response || "")}</p><q>${escapeHtml(item.evidence || "")}</q></article>`).join("")}<div class="record-unresolved"><b>Unresolved</b><ul>${(report.debate.unresolved || []).map(item => `<li>${escapeHtml(item)}</li>`).join("")}</ul></div></div></div>`;
     records.append(detail);
   });
 }
@@ -169,15 +173,79 @@ function setTimeline(stage, complete = false) {
   document.querySelectorAll(".run-timeline i").forEach((item, index) => item.classList.toggle("active", complete || index < stage));
 }
 
-function playDebate() {
-  if (!latestReport || !("speechSynthesis" in window)) return;
-  window.speechSynthesis.cancel();
-  const button = document.querySelector('[data-action="voice"]');
-  const lines = latestReport.debate.exchanges.map(item => `${nameFor(item.speaker, latestReport)} says: ${item.response}`).join(" ");
-  const utterance = new SpeechSynthesisUtterance(`Panel debate. ${lines}`);
-  utterance.rate = .96; utterance.pitch = 1.05; utterance.onend = () => { if (button) button.textContent = "♬ Play debate"; };
-  if (button) button.textContent = "■ Stop playback";
+function reportForVoiceControl(control) {
+  const index = control?.closest("[data-report-index]")?.dataset.reportIndex;
+  return index === undefined ? latestReport : latestReport?.candidates?.[Number(index)];
+}
+
+function updateVoicePlayer(player, state, message = "Listen speaker by speaker.") {
+  if (!player) return;
+  const play = player.querySelector('[data-action="voice-play"]');
+  const pause = player.querySelector('[data-action="voice-pause"]');
+  const stop = player.querySelector('[data-action="voice-stop"]');
+  const status = player.querySelector(".voice-status");
+  if (play) play.textContent = state === "playing" ? "▶ Playing" : "▶ Listen to debate";
+  if (pause) { pause.disabled = state !== "playing" && state !== "paused"; pause.textContent = state === "paused" ? "Resume" : "Pause"; }
+  if (stop) stop.disabled = state !== "playing" && state !== "paused";
+  if (status) status.textContent = message;
+  player.classList.toggle("is-playing", state === "playing" || state === "paused");
+}
+
+function resetVoicePlayers() {
+  document.querySelectorAll(".voice-player").forEach(player => updateVoicePlayer(player, "idle"));
+}
+
+function voiceTurn(item, report) {
+  const speaker = nameFor(item.speaker, report);
+  const respondent = nameFor(item.responding_to, report);
+  return {
+    speaker,
+    text: `${speaker}, ${item.position || "responding"} ${respondent}. ${item.response || ""}${item.evidence ? ` Evidence cited: ${item.evidence}` : ""}`,
+    settings: { technical: [0.96, 0.9], culture: [1.02, 1.15], manager: [0.98, 1], skeptic: [0.93, 0.78] }[item.speaker] || [0.98, 1]
+  };
+}
+
+function playDebate(control) {
+  const report = reportForVoiceControl(control);
+  const player = control?.closest(".voice-player");
+  if (!report?.debate?.exchanges?.length) return;
+  if (!("speechSynthesis" in window)) { updateVoicePlayer(player, "idle", "Audio narration is not supported in this browser."); return; }
+  stopDebate();
+  const turns = report.debate.exchanges.map(item => voiceTurn(item, report));
+  speechSession = { player, turns, index: 0, stopped: false };
+  updateVoicePlayer(player, "playing", "Opening the panel debate…");
+  speakNextTurn(speechSession);
+}
+
+function speakNextTurn(session) {
+  if (speechSession !== session || session.stopped) return;
+  const turn = session.turns[session.index++];
+  if (!turn) { updateVoicePlayer(session.player, "idle", "Debate playback complete."); speechSession = null; return; }
+  const utterance = new SpeechSynthesisUtterance(turn.text);
+  utterance.rate = turn.settings[0];
+  utterance.pitch = turn.settings[1];
+  utterance.onstart = () => { if (speechSession === session) updateVoicePlayer(session.player, "playing", `Now speaking: ${turn.speaker}`); };
+  utterance.onend = () => { if (speechSession === session && !session.stopped) speakNextTurn(session); };
+  utterance.onerror = () => { if (speechSession === session && !session.stopped) { updateVoicePlayer(session.player, "idle", "Playback stopped. Try listening again."); speechSession = null; } };
   window.speechSynthesis.speak(utterance);
+}
+
+function pauseDebate(control) {
+  if (!speechSession || !("speechSynthesis" in window)) return;
+  if (window.speechSynthesis.paused) {
+    window.speechSynthesis.resume();
+    updateVoicePlayer(speechSession.player, "playing", "Debate resumed.");
+  } else {
+    window.speechSynthesis.pause();
+    updateVoicePlayer(speechSession.player, "paused", "Debate paused.");
+  }
+}
+
+function stopDebate() {
+  if ("speechSynthesis" in window) window.speechSynthesis.cancel();
+  if (speechSession) speechSession.stopped = true;
+  speechSession = null;
+  resetVoicePlayers();
 }
 
 function exportReport() {
