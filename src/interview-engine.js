@@ -21,13 +21,30 @@ function textFromResponse(response) {
   return response.output?.flatMap(item => item.content || []).filter(part => part.type === "output_text").map(part => part.text).join("\n") || "";
 }
 
+async function requestWithTimeout(url, options, provider) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 25_000);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } catch (error) {
+    if (error.name === "AbortError") {
+      const timeoutError = new Error(`${provider} did not respond within 25 seconds. The provider may be under high demand; please run the panel again.`);
+      timeoutError.retryable = true;
+      throw timeoutError;
+    }
+    throw error;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 async function callModel(config, instructions, input) {
   if (config.provider === "gemini") {
     if (!config.geminiApiKey) throw new Error("Add GEMINI_API_KEY to a local .env file before running a Gemini panel review.");
     const models = [...new Set([config.model, config.fallbackModel].filter(Boolean))];
     let lastError;
     for (const model of models) {
-      for (let attempt = 0; attempt < 2; attempt += 1) {
+      for (let attempt = 0; attempt < 1; attempt += 1) {
         try { return await requestGemini(config, model, instructions, input); }
         catch (error) {
           lastError = error;
@@ -40,18 +57,18 @@ async function callModel(config, instructions, input) {
   }
 
   if (!config.openaiApiKey) throw new Error("Add OPENAI_API_KEY to a local .env file before running an OpenAI panel review.");
-  const response = await fetch("https://api.openai.com/v1/responses", {
+  const response = await requestWithTimeout("https://api.openai.com/v1/responses", {
     method: "POST",
     headers: { "content-type": "application/json", authorization: `Bearer ${config.openaiApiKey}` },
     body: JSON.stringify({ model: config.model, store: false, instructions, input, temperature: 0.2 })
-  });
+  }, "OpenAI");
   const body = await response.json();
   if (!response.ok) throw new Error(body.error?.message || "OpenAI could not complete this review.");
   return parseJson(textFromResponse(body));
 }
 
 async function requestGemini(config, model, instructions, input) {
-  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
+  const response = await requestWithTimeout(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
     method: "POST",
     headers: { "content-type": "application/json", "x-goog-api-key": config.geminiApiKey },
     body: JSON.stringify({
@@ -59,7 +76,7 @@ async function requestGemini(config, model, instructions, input) {
       contents: [{ role: "user", parts: [{ text: input }] }],
       generationConfig: { temperature: 0.2, responseMimeType: "application/json" }
     })
-  });
+  }, "Gemini");
   const body = await response.json();
   if (!response.ok) {
     const error = new Error(body.error?.message || "Gemini could not complete this review.");
