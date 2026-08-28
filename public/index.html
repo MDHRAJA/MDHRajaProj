@@ -13,6 +13,7 @@
     <link rel="stylesheet" href="/slate.css" />
     <link rel="stylesheet" href="/records.css" />
     <link rel="stylesheet" href="/autofill.css" />
+    <link rel="stylesheet" href="/voice.css" />
   </head>
   <body>
     <main class="shell">
@@ -23,7 +24,7 @@
 
       <section class="intro">
         <div><p class="eyebrow">Multi-agent interview panel</p><h1>Get the whole room,<br /><em>not one opinion.</em></h1><p class="lede">Turn a resume and interview transcript into an evidence-backed panel discussion—with independent reviewers, direct challenge, and a reasoned hiring decision.</p></div>
-        <aside class="hero-panel" aria-label="Panel composition"><p class="eyebrow">Your interview room</p><div class="hero-avatars"><span class="violet">AC</span><span class="sky">MP</span><span class="amber">JB</span><span class="coral">NK</span></div><p><b>4 independent perspectives</b><br />One shared evidence file. No groupthink until debate.</p><div class="signal-row"><span><i></i> Evidence cited</span><span><i></i> Separate calls</span></div></aside>
+        <aside class="hero-panel" aria-label="Panel composition"><p class="eyebrow">Your interview room</p><div class="hero-avatars"><span class="violet">VM</span><span class="sky">MK</span><span class="amber">AR</span><span class="coral">KI</span></div><p><b>4 independent perspectives</b><br />One shared evidence file. No groupthink until debate.</p><div class="signal-row"><span><i></i> Evidence cited</span><span><i></i> Separate calls</span></div></aside>
       </section>
 
       <section class="workspace" aria-label="Candidate material">
@@ -62,7 +63,7 @@
       <div class="decision-card"><div><p class="eyebrow">Final recommendation</p><h2 class="decision-label"></h2><p class="role-fit"></p><p class="decision-rationale"></p></div><div class="confidence"><span>Confidence</span><strong></strong><div class="confidence-track"><i></i></div></div></div>
       <div class="profile-card"><div class="profile-header"><div><p class="eyebrow">Candidate profile</p><h3 class="candidate-name"></h3></div><p class="headline"></p></div><div class="fact-columns"><div><h4>Supported skills</h4><ul class="skills-list"></ul></div><div><h4>Role requirements</h4><ul class="requirements-list"></ul></div><div><h4>Claims to validate</h4><ul class="claims-list"></ul></div></div></div>
       <div class="report-section"><div class="section-title"><p class="eyebrow">Independent opinions</p><h3>Four lenses. No groupthink.</h3><p>Each opinion was generated in a separate call before the panel debate.</p></div><div class="opinion-grid"></div></div>
-      <div class="debate-card"><div class="debate-heading"><div><p class="eyebrow">Panel debate</p><h3 class="debate-summary"></h3></div><button class="voice-button" type="button" data-action="voice">♬ Play debate</button></div><div class="exchange-list"></div><div class="unresolved-box"><b>Still unresolved</b><ul></ul></div></div>
+      <div class="debate-card"><div class="debate-heading"><div><p class="eyebrow">Panel debate</p><h3 class="debate-summary"></h3></div><div class="voice-player"><div class="voice-controls"><button class="voice-button" type="button" data-action="voice-play">▶ Listen to debate</button><button class="voice-secondary" type="button" data-action="voice-pause" disabled>Pause</button><button class="voice-secondary" type="button" data-action="voice-stop" disabled>Stop</button></div><p class="voice-status" aria-live="polite">Listen speaker by speaker.</p></div></div><div class="exchange-list"></div><div class="unresolved-box"><b>Still unresolved</b><ul></ul></div></div>
       <div class="closing-grid"><article><p class="eyebrow">Strengths</p><ul class="strengths-list"></ul></article><article><p class="eyebrow">Concerns</p><ul class="concerns-list"></ul></article><article><p class="eyebrow">Next step</p><p class="next-step"></p><div class="factors"></div></article></div>
       <div class="report-footer"><p>Decision created from cited candidate material and recorded panel deliberation.</p><button class="export-button" type="button" data-action="export">Export panel record ↓</button></div>
     </template>
