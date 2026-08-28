@@ -97,12 +97,16 @@ function renderReport(data) {
   renderDebateLedger(exchanges, data.debate);
   list(fragment.querySelector(".unresolved-box ul"), data.debate.unresolved); list(fragment.querySelector(".strengths-list"), decision.strengths); list(fragment.querySelector(".concerns-list"), decision.concerns);
   fragment.querySelector(".next-step").textContent = decision.next_step; const factors = fragment.querySelector(".factors"); (decision.decision_factors || []).forEach(item => { const chip = document.createElement("p"); chip.innerHTML = `<b>${escapeHtml(item.weight)} weight</b> ${escapeHtml(item.factor)} — ${escapeHtml(item.reason)}`; factors.append(chip); });
-  renderVisualInsights(fragment, data.opinions || []);
+  renderVisualInsights(fragment, data.opinions || [], profile);
   $("#report").replaceChildren(fragment);
 }
 
-function renderVisualInsights(fragment, opinions) {
-  fragment.querySelector(".visual-insights > article:first-child")?.remove();
+function renderVisualInsights(fragment, opinions, profile = {}) {
+  const coverage = evidenceCoverage(profile);
+  const chart = fragment.querySelector(".coverage-chart");
+  const legend = fragment.querySelector(".coverage-legend");
+  if (chart) chart.innerHTML = `<div class="coverage-donut" style="--coverage:${coverage.percent}%"><span><b>${coverage.percent}%</b><small>evidence</small></span></div>`;
+  if (legend) legend.innerHTML = `<span class="covered"><i></i><b>${coverage.matched}</b> supported requirement${coverage.matched === 1 ? "" : "s"}</span><span class="uncovered"><i></i><b>${coverage.unmatched}</b> to validate</span>${coverage.skills.length ? `<div class="coverage-skills">${coverage.skills.map(skill => `<em>${escapeHtml(skill)}</em>`).join("")}</div>` : ""}`;
   const bars = fragment.querySelector(".confidence-bars-chart");
   opinions.forEach(opinion => {
     const item = document.createElement("div");
@@ -111,6 +115,34 @@ function renderVisualInsights(fragment, opinions) {
     item.innerHTML = `<span>${escapeHtml(name)}</span><div><i style="width:${confidence}%"></i></div><b>${confidence}%</b>`;
     bars.append(item);
   });
+}
+
+function evidenceCoverage(profile = {}) {
+  const requirements = Array.isArray(profile.role_requirements) ? profile.role_requirements : [];
+  const skills = Array.isArray(profile.skills) ? profile.skills : [];
+  const sourceText = [
+    ...skills.flatMap(item => [item.name, item.evidence]),
+    ...(profile.experience || []).flatMap(item => [item.summary, item.evidence]),
+    ...(profile.claims || []).flatMap(item => [item.claim, item.evidence])
+  ].filter(Boolean).join(" ");
+  const sourceTokens = informativeTokens(sourceText);
+  const matched = requirements.filter(item => {
+    const requirement = item.requirement || item.evidence || "";
+    const terms = informativeTokens(requirement);
+    const directSkillMatch = skills.some(skill => {
+      const name = String(skill.name || "").toLowerCase().trim();
+      const text = requirement.toLowerCase();
+      return name.length > 2 && (text.includes(name) || name.includes(text));
+    });
+    return directSkillMatch || terms.filter(term => sourceTokens.has(term)).length >= Math.min(2, Math.max(1, terms.length));
+  }).length;
+  const total = requirements.length || skills.length || 1;
+  return { matched, unmatched: Math.max(0, total - matched), percent: Math.round((matched / total) * 100), skills: skills.map(item => item.name).filter(Boolean).slice(0, 6) };
+}
+
+function informativeTokens(value) {
+  const stop = new Set(["with","that","this","from","have","will","your","their","they","and","the","for","are","into","role","work","years","year","experience","strong","ability","skills","skill","knowledge","using","used","about","candidate","design","product"]);
+  return new Set(String(value || "").toLowerCase().match(/[a-z][a-z0-9+-]{2,}/g)?.filter(term => !stop.has(term)) || []);
 }
 
 function ledgerMarkup(debate = {}) {
