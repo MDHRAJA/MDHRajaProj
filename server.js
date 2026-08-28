@@ -1,7 +1,7 @@
 import { createServer } from "node:http";
 import { readFile } from "node:fs/promises";
 import { extname, join, normalize } from "node:path";
-import { runPanel } from "./src/interview-engine.js";
+import { runHiringSlate, runPanel } from "./src/interview-engine.js";
 
 const port = Number(process.env.PORT || 3000);
 const publicDir = join(process.cwd(), "public");
@@ -35,13 +35,14 @@ createServer(async (req, res) => {
     if (req.method === "POST" && req.url === "/api/analyze") {
       const payload = await readJson(req);
       const provider = (process.env.AI_PROVIDER || (process.env.GEMINI_API_KEY ? "gemini" : "openai")).toLowerCase();
-      const report = await runPanel(payload, {
+      const config = {
         provider,
         openaiApiKey: process.env.OPENAI_API_KEY,
         geminiApiKey: process.env.GEMINI_API_KEY,
         model: provider === "gemini" ? (process.env.GEMINI_MODEL || "gemini-3.6-flash") : (process.env.OPENAI_MODEL || "gpt-4.1-mini"),
         fallbackModel: provider === "gemini" ? (process.env.GEMINI_FALLBACK_MODEL || "gemini-3.1-flash-lite") : null
-      });
+      };
+      const report = Array.isArray(payload.candidates) ? await runHiringSlate(payload, config) : await runPanel(payload, config);
       return send(res, 200, report);
     }
     if (req.method !== "GET" && req.method !== "HEAD") return send(res, 405, { error: "Method not allowed" });
