@@ -16,7 +16,16 @@ $("#load-sample").addEventListener("click", () => {
 
 document.querySelectorAll(".file-input").forEach(input => input.addEventListener("change", async event => {
   const file = event.target.files?.[0];
-  if (file) { $("#" + event.target.dataset.target).value = await file.text(); event.target.parentElement.querySelector("b").textContent = file.name; updateBriefStatus(); }
+  if (!file) return;
+  const label = event.target.parentElement.querySelector("b");
+  try {
+    label.textContent = file.name.endsWith(".pdf") ? "Extracting PDF text…" : "Reading file…";
+    const content = file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf") ? await extractPdfText(file) : await file.text();
+    if (!content.trim()) throw new Error("No readable text was found in this file.");
+    $("#" + event.target.dataset.target).value = content;
+    label.textContent = `${file.name} · ready`;
+    updateBriefStatus();
+  } catch (error) { label.textContent = "Could not read this file"; alert(error.message || "This file could not be read. Try copying its text into the field instead."); }
 }));
 document.querySelectorAll("#role, #resume, #transcript").forEach(input => input.addEventListener("input", updateBriefStatus));
 
@@ -86,6 +95,19 @@ function exportReport() {
   const markdown = `# Panelroom interview record\n\n## ${p.candidate_name || "Candidate"}\n${p.headline || ""}\n\n## Final recommendation\n**${d.recommendation.replaceAll("_", " ")}** · ${d.confidence}% confidence\n\n${d.rationale}\n\n## Strengths\n${(d.strengths || []).map(item => `- ${item}`).join("\n")}\n\n## Concerns\n${(d.concerns || []).map(item => `- ${item}`).join("\n")}\n\n## Unresolved disagreement\n${(d.unresolved_disagreements || []).map(item => `- ${item}`).join("\n")}\n\n## Next step\n${d.next_step}\n\n## Panel debate\n${latestReport.debate.exchanges.map(item => `- **${nameFor(item.speaker, latestReport)}** (${item.position} ${nameFor(item.responding_to, latestReport)}): ${item.response}`).join("\n")}`;
   const url = URL.createObjectURL(new Blob([markdown], { type: "text/markdown" })); const link = document.createElement("a");
   link.href = url; link.download = "panelroom-interview-record.md"; link.click(); URL.revokeObjectURL(url);
+}
+
+async function extractPdfText(file) {
+  const pdfjs = await import("https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.min.mjs");
+  pdfjs.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.worker.min.mjs";
+  const document = await pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise;
+  const pages = [];
+  for (let pageNumber = 1; pageNumber <= document.numPages; pageNumber += 1) {
+    const page = await document.getPage(pageNumber);
+    const content = await page.getTextContent();
+    pages.push(content.items.map(item => item.str).join(" "));
+  }
+  return pages.join("\n\n");
 }
 
 function fillEvidence(node, items = [], key) { items.slice(0, 4).forEach(item => { const li = document.createElement("li"); li.innerHTML = `<b>${escapeHtml(item[key])}</b><q>${escapeHtml(item.evidence)}</q>`; node.append(li); }); }
