@@ -1,8 +1,8 @@
 const PERSONAS = [
-  { id: "technical", name: "Ari Chen", role: "Technical interviewer", focus: "technical depth, practical skill, architecture choices, and the ability to explain trade-offs", color: "violet" },
-  { id: "culture", name: "Maya Patel", role: "People & culture interviewer", focus: "communication, collaboration, accountability, and values alignment", color: "sky" },
-  { id: "manager", name: "Jon Bell", role: "Hiring manager", focus: "role fit, business impact, ramp-up risk, and whether to hire", color: "amber" },
-  { id: "skeptic", name: "Noor Khan", role: "Evidence skeptic", focus: "contradictions, unsupported claims, gaps, exaggeration, and unanswered risks", color: "coral" }
+  { id: "technical", name: "Vikramaditya Motwane", role: "Technical interviewer", focus: "technical depth, practical skill, architecture choices, and the ability to explain trade-offs", color: "violet" },
+  { id: "culture", name: "Manasvi Kamble", role: "People & culture interviewer", focus: "communication, collaboration, accountability, and values alignment", color: "sky" },
+  { id: "manager", name: "Anirudh Ravichander", role: "Hiring manager", focus: "role fit, business impact, ramp-up risk, and whether to hire", color: "amber" },
+  { id: "skeptic", name: "Kalyani Iyer", role: "Evidence skeptic", focus: "contradictions, unsupported claims, gaps, exaggeration, and unanswered risks", color: "coral" }
 ];
 
 const evidenceRule = `Every statement about the candidate must cite an exact quote or concrete fact from the provided resume or transcript. Every statement about role fit must cite a specific job-description requirement. Do not invent experience or requirements. If evidence is missing, say so explicitly.`;
