@@ -1,4 +1,5 @@
 const $ = selector => document.querySelector(selector);
+let latestReport = null;
 const sample = {
   role: "Senior Product Designer",
   resume: `Alex Morgan\nProduct Designer | 7 years experience\n\nExperience\n• Lead Product Designer, Orbit Health (2021–present): Led the redesign of a clinician workflow used by 12,000 care providers. Partnered with engineering and research; reduced task completion time by 28%.\n• Product Designer, Ledgerline (2018–2021): Shipped invoicing and payment flows for small businesses.\n\nSkills\nFigma, prototyping, user research, design systems, accessibility, product strategy.\n\nEducation\nBDes, Interaction Design, 2018.`,
@@ -9,24 +10,27 @@ const stageCopy = ["Building the shared evidence file…", "Four panelists are r
 
 $("#load-sample").addEventListener("click", () => {
   $("#role").value = sample.role; $("#resume").value = sample.resume; $("#transcript").value = sample.transcript;
+  updateBriefStatus();
   document.querySelector(".workspace").scrollIntoView({ behavior: "smooth", block: "start" });
 });
 
 document.querySelectorAll(".file-input").forEach(input => input.addEventListener("change", async event => {
-  const file = event.target.files?.[0]; if (file) $("#" + event.target.dataset.target).value = await file.text();
+  const file = event.target.files?.[0];
+  if (file) { $("#" + event.target.dataset.target).value = await file.text(); event.target.parentElement.querySelector("b").textContent = file.name; updateBriefStatus(); }
 }));
+document.querySelectorAll("#role, #resume, #transcript").forEach(input => input.addEventListener("input", updateBriefStatus));
 
 $("#run-panel").addEventListener("click", async () => {
   const payload = { role: $("#role").value.trim(), resume: $("#resume").value.trim(), transcript: $("#transcript").value.trim() };
   if (!payload.role || !payload.resume || !payload.transcript) { alert("Add the target role, resume, and interview transcript first."); return; }
-  const results = $("#results"), button = $("#run-panel"), status = $("#status");
+  const results = $("#results"), button = $("#run-panel"), status = $("#status"), timeline = $("#run-timeline");
   results.classList.remove("hidden"); results.scrollIntoView({ behavior: "smooth", block: "start" }); button.disabled = true; $("#report").innerHTML = "";
-  let stage = 0; status.innerHTML = `<span class="pulse"></span><span>${stageCopy[stage]}</span>`;
-  const timer = setInterval(() => { stage = Math.min(stage + 1, stageCopy.length - 1); status.innerHTML = `<span class="pulse"></span><span>${stageCopy[stage]}</span>`; }, 5000);
+  timeline.classList.remove("hidden"); let stage = 0; setTimeline(stage); status.innerHTML = `<span class="pulse"></span><span>${stageCopy[stage]}</span>`;
+  const timer = setInterval(() => { stage = Math.min(stage + 1, stageCopy.length - 1); setTimeline(stage); status.innerHTML = `<span class="pulse"></span><span>${stageCopy[stage]}</span>`; }, 5000);
   try {
     const response = await fetch("/api/analyze", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(payload) });
     const data = await response.json(); if (!response.ok) throw new Error(data.error || "The panel could not complete this review.");
-    renderReport(data); status.classList.add("complete"); status.innerHTML = `<span>✓</span><span>Panel completed. Independent reviews, debate, and decision are recorded below.</span>`;
+    latestReport = data; renderReport(data); setTimeline(3, true); status.classList.add("complete"); status.innerHTML = `<span>✓</span><span>Panel completed. Independent reviews, debate, and decision are recorded below.</span>`;
   } catch (error) { status.classList.add("error"); status.innerHTML = `<span>!</span><span>${escapeHtml(error.message)}</span>`; }
   finally { clearInterval(timer); button.disabled = false; }
 });
@@ -47,6 +51,41 @@ function renderReport(data) {
   list(fragment.querySelector(".unresolved-box ul"), data.debate.unresolved); list(fragment.querySelector(".strengths-list"), decision.strengths); list(fragment.querySelector(".concerns-list"), decision.concerns);
   fragment.querySelector(".next-step").textContent = decision.next_step; const factors = fragment.querySelector(".factors"); (decision.decision_factors || []).forEach(item => { const chip = document.createElement("p"); chip.innerHTML = `<b>${escapeHtml(item.weight)} weight</b> ${escapeHtml(item.factor)} — ${escapeHtml(item.reason)}`; factors.append(chip); });
   $("#report").replaceChildren(fragment);
+}
+
+document.addEventListener("click", event => {
+  const action = event.target.closest("[data-action]")?.dataset.action;
+  if (action === "voice") playDebate();
+  if (action === "export") exportReport();
+});
+
+function updateBriefStatus() {
+  const filled = [$("#role").value, $("#resume").value, $("#transcript").value].filter(value => value.trim()).length;
+  $("#brief-status").textContent = filled === 3 ? "Brief complete · ready to convene" : `${filled}/3 materials ready`;
+}
+
+function setTimeline(stage, complete = false) {
+  document.querySelectorAll(".run-timeline article").forEach((item, index) => item.classList.toggle("active", complete || index <= stage));
+  document.querySelectorAll(".run-timeline i").forEach((item, index) => item.classList.toggle("active", complete || index < stage));
+}
+
+function playDebate() {
+  if (!latestReport || !("speechSynthesis" in window)) return;
+  window.speechSynthesis.cancel();
+  const button = document.querySelector('[data-action="voice"]');
+  const lines = latestReport.debate.exchanges.map(item => `${nameFor(item.speaker, latestReport)} says: ${item.response}`).join(" ");
+  const utterance = new SpeechSynthesisUtterance(`Panel debate. ${lines}`);
+  utterance.rate = .96; utterance.pitch = 1.05; utterance.onend = () => { if (button) button.textContent = "♬ Play debate"; };
+  if (button) button.textContent = "■ Stop playback";
+  window.speechSynthesis.speak(utterance);
+}
+
+function exportReport() {
+  if (!latestReport) return;
+  const d = latestReport.decision, p = latestReport.profile;
+  const markdown = `# Panelroom interview record\n\n## ${p.candidate_name || "Candidate"}\n${p.headline || ""}\n\n## Final recommendation\n**${d.recommendation.replaceAll("_", " ")}** · ${d.confidence}% confidence\n\n${d.rationale}\n\n## Strengths\n${(d.strengths || []).map(item => `- ${item}`).join("\n")}\n\n## Concerns\n${(d.concerns || []).map(item => `- ${item}`).join("\n")}\n\n## Unresolved disagreement\n${(d.unresolved_disagreements || []).map(item => `- ${item}`).join("\n")}\n\n## Next step\n${d.next_step}\n\n## Panel debate\n${latestReport.debate.exchanges.map(item => `- **${nameFor(item.speaker, latestReport)}** (${item.position} ${nameFor(item.responding_to, latestReport)}): ${item.response}`).join("\n")}`;
+  const url = URL.createObjectURL(new Blob([markdown], { type: "text/markdown" })); const link = document.createElement("a");
+  link.href = url; link.download = "panelroom-interview-record.md"; link.click(); URL.revokeObjectURL(url);
 }
 
 function fillEvidence(node, items = [], key) { items.slice(0, 4).forEach(item => { const li = document.createElement("li"); li.innerHTML = `<b>${escapeHtml(item[key])}</b><q>${escapeHtml(item.evidence)}</q>`; node.append(li); }); }
