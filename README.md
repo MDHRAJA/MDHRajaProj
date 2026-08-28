@@ -8,7 +8,7 @@ An evidence-led multi-agent interview panel simulator. It builds one candidate p
 2. Run `node server.js`.
 3. Open `http://localhost:3000`.
 
-Both OpenAI and Gemini are supported. The API key remains server-side. The app accepts pasted material, PDF, `.txt`, or `.md` files for a resume and transcript. PDF text is extracted in the browser before analysis.
+Both OpenAI and Gemini are supported. The API key remains server-side. The app accepts pasted material, PDF, `.txt`, or `.md` files for the resume, interview transcript, and detailed job description. PDF text is extracted in the browser before analysis. The job description is provided to every panel stage and is explicitly weighed in the final role-alignment decision.
 
 For Gemini, the application retries temporary 500/503 capacity errors once, then automatically retries the same call with `GEMINI_FALLBACK_MODEL`. The default pair is `gemini-3.6-flash` and `gemini-3.1-flash-lite`.
 
