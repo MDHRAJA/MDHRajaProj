@@ -114,5 +114,24 @@ export async function runPanel(payload, config) {
   return { meta: { personas: PERSONAS, independence: "Each panelist completed a separate call without access to peer conclusions.", generated_at: new Date().toISOString() }, profile, opinions, debate: panelDebate, decision };
 }
 
+export async function runHiringSlate(payload, config) {
+  const role = clean(payload.role, 300), jobDescription = clean(payload.jobDescription), hiringCount = Math.max(1, Math.floor(Number(payload.hiringCount) || 1));
+  const candidates = Array.isArray(payload.candidates) ? payload.candidates.slice(0, 12) : [];
+  if (!role || !jobDescription || !candidates.length) throw new Error("Add a target role, detailed job description, and at least one candidate before building a hiring slate.");
+  if (candidates.some(candidate => !clean(candidate.resume) || !clean(candidate.transcript))) throw new Error("Every candidate needs both a resume and interview transcript.");
+  if (hiringCount > candidates.length) throw new Error("The number of openings cannot exceed the number of candidates.");
+
+  // Each candidate gets a complete independent panel before any cross-candidate comparison begins.
+  const reports = await Promise.all(candidates.map(async (candidate, index) => {
+    const report = await runPanel({ role, jobDescription, resume: clean(candidate.resume), transcript: clean(candidate.transcript) }, config);
+    return { candidate_name: clean(candidate.name, 200) || report.profile.candidate_name || `Candidate ${index + 1}`, source_material: { resume: clean(candidate.resume), transcript: clean(candidate.transcript) }, ...report };
+  }));
+  const selection = await callModel(config,
+    `You are the final hiring committee chair selecting a slate for ${hiringCount} open role(s). You receive the detailed job description, every candidate's resume and transcript, and their complete independent panel record including debate. Select exactly ${hiringCount} candidates only when evidence supports it; never average scores mechanically. Rank candidates based on demonstrated role requirements, evidence quality, production readiness, risks, and unresolved disagreements. Return valid JSON only: {"rationale":"string","selected_candidates":[{"candidate_name":"string","rank":1,"rationale":"string","next_step":"string"}],"comparison":[{"candidate_name":"string","rank":1,"readiness":0-100,"role_fit":0-100,"risk":0-100,"summary":"string"}],"unresolved_tradeoffs":["string"]}.`,
+    JSON.stringify({ target_role: role, detailed_job_description: jobDescription, hiring_count: hiringCount, candidates: reports })
+  );
+  return { mode: "slate", hiring_count: hiringCount, candidates: reports, selection };
+}
+
 export { PERSONAS };
 
