@@ -97,16 +97,12 @@ function renderReport(data) {
   renderDebateLedger(exchanges, data.debate);
   list(fragment.querySelector(".unresolved-box ul"), data.debate.unresolved); list(fragment.querySelector(".strengths-list"), decision.strengths); list(fragment.querySelector(".concerns-list"), decision.concerns);
   fragment.querySelector(".next-step").textContent = decision.next_step; const factors = fragment.querySelector(".factors"); (decision.decision_factors || []).forEach(item => { const chip = document.createElement("p"); chip.innerHTML = `<b>${escapeHtml(item.weight)} weight</b> ${escapeHtml(item.factor)} — ${escapeHtml(item.reason)}`; factors.append(chip); });
-  renderVisualInsights(fragment, data.opinions || [], profile);
+  renderVisualInsights(fragment, data.opinions || []);
   $("#report").replaceChildren(fragment);
 }
 
-function renderVisualInsights(fragment, opinions, profile = {}) {
-  const coverage = evidenceCoverage(profile);
-  const chart = fragment.querySelector(".coverage-chart");
-  const legend = fragment.querySelector(".coverage-legend");
-  if (chart) chart.innerHTML = `<div class="coverage-donut" style="--coverage:${coverage.percent}%"><span><b>${coverage.percent}%</b><small>evidence</small></span></div>`;
-  if (legend) legend.innerHTML = `<span class="covered"><i></i><b>${coverage.matched}</b> supported requirement${coverage.matched === 1 ? "" : "s"}</span><span class="uncovered"><i></i><b>${coverage.unmatched}</b> to validate</span>${coverage.skills.length ? `<div class="coverage-skills">${coverage.skills.map(skill => `<em>${escapeHtml(skill)}</em>`).join("")}</div>` : ""}`;
+function renderVisualInsights(fragment, opinions) {
+  fragment.querySelector(".visual-insights > article:first-child")?.remove();
   const bars = fragment.querySelector(".confidence-bars-chart");
   opinions.forEach(opinion => {
     const item = document.createElement("div");
@@ -115,40 +111,6 @@ function renderVisualInsights(fragment, opinions, profile = {}) {
     item.innerHTML = `<span>${escapeHtml(name)}</span><div><i style="width:${confidence}%"></i></div><b>${confidence}%</b>`;
     bars.append(item);
   });
-}
-
-function evidenceCoverage(profile = {}) {
-  const requirements = Array.isArray(profile.role_requirements) ? profile.role_requirements : [];
-  const skills = Array.isArray(profile.skills) ? profile.skills : [];
-  const sourceText = [
-    ...skills.flatMap(item => [item.name, item.evidence]),
-    ...(profile.experience || []).flatMap(item => [item.summary, item.evidence]),
-    ...(profile.claims || []).flatMap(item => [item.claim, item.evidence])
-  ].filter(Boolean).join(" ");
-  const sourceTokens = informativeTokens(sourceText);
-  const matched = requirements.filter(item => {
-    const requirement = item.requirement || item.evidence || "";
-    const terms = informativeTokens(requirement);
-    const directSkillMatch = skills.some(skill => {
-      const name = String(skill.name || "").toLowerCase().trim();
-      const text = requirement.toLowerCase();
-      return name.length > 2 && (text.includes(name) || name.includes(text));
-    });
-    return directSkillMatch || terms.filter(term => sourceTokens.has(term)).length >= Math.min(2, Math.max(1, terms.length));
-  }).length;
-  const total = requirements.length || skills.length || 1;
-  return { matched, unmatched: Math.max(0, total - matched), percent: Math.round((matched / total) * 100), skills: skills.map(item => item.name).filter(Boolean).slice(0, 6) };
-}
-
-function coverageMarkup(profile) {
-  const coverage = evidenceCoverage(profile);
-  const skills = coverage.skills.map(skill => `<em>${escapeHtml(skill)}</em>`).join("");
-  return `<section class="record-coverage coverage-chart-card"><div><p class="eyebrow">Role coverage</p><h4>Requirements backed by evidence</h4><p>Job requirements compared with facts cited in this candidate's record.</p></div><div class="coverage-chart"><div class="coverage-donut" style="--coverage:${coverage.percent}%"><span><b>${coverage.percent}%</b><small>evidence</small></span></div></div><div class="coverage-legend"><span class="covered"><i></i><b>${coverage.matched}</b> supported requirement${coverage.matched === 1 ? "" : "s"}</span><span class="uncovered"><i></i><b>${coverage.unmatched}</b> to validate</span>${skills ? `<div class="coverage-skills">${skills}</div>` : ""}</div></section>`;
-}
-
-function informativeTokens(value) {
-  const stop = new Set(["with","that","this","from","have","will","your","their","they","and","the","for","are","into","role","work","years","year","experience","strong","ability","skills","skill","knowledge","using","used","about","candidate","design","product"]);
-  return new Set(String(value || "").toLowerCase().match(/[a-z][a-z0-9+-]{2,}/g)?.filter(term => !stop.has(term)) || []);
 }
 
 function ledgerMarkup(debate = {}) {
@@ -241,7 +203,6 @@ function renderSlate(data) {
     verdicts.append(row);
     const detail = document.createElement("article"); detail.className = "interview-record";
     detail.innerHTML = `<div class="record-header"><span><b>Detailed Interview Record</b><small>${escapeHtml(report.candidate_name)} · evidence, debate, and decision</small></span></div><div class="record-body"><div class="record-overview"><div><p class="eyebrow">Candidate profile</p><h4>${escapeHtml(report.profile.candidate_name || report.candidate_name)}</h4><p>${escapeHtml(report.profile.headline || "")}</p></div><div><p class="eyebrow">Final chair decision</p><h4>${escapeHtml((report.decision.recommendation || "").replaceAll("_", " "))}</h4><p>${escapeHtml(report.decision.rationale || "")}</p></div></div><div class="record-opinions"><p class="eyebrow">Independent panel opinions</p>${(report.opinions || []).map(opinion => `<article><div><b>${escapeHtml(personaName(opinion.persona))}</b><span>${escapeHtml((opinion.recommendation || "").replaceAll("_", " "))} · ${escapeHtml(String(opinion.confidence || "—"))}% confidence</span></div><p>${escapeHtml(opinion.summary || "")}</p><dl><dt>Strength evidence</dt><dd>${escapeHtml(opinion.strengths?.[0]?.evidence || "No evidence recorded")}</dd><dt>Concern evidence</dt><dd>${escapeHtml(opinion.concerns?.[0]?.evidence || "No concern recorded")}</dd></dl></article>`).join("")}</div><div class="record-debate"><div class="record-debate-heading"><div><p class="eyebrow">Agreement &amp; disagreement in debate</p><h4>${escapeHtml(report.debate.summary || "")}</h4></div><div class="voice-player" data-report-index="${reportIndex}"><div class="voice-controls"><button class="voice-button" type="button" data-action="voice-play">▶ Listen</button><button class="voice-secondary" type="button" data-action="voice-pause" disabled>Pause</button><button class="voice-secondary" type="button" data-action="voice-stop" disabled>Stop</button></div><p class="voice-status" aria-live="polite">Listen speaker by speaker.</p></div></div>${(report.debate.exchanges || []).map(item => `<article><b>${escapeHtml(personaName(item.speaker))}</b><span>${escapeHtml(item.position)}</span><b>${escapeHtml(personaName(item.responding_to))}</b><p>${escapeHtml(item.response || "")}</p><q>${escapeHtml(item.evidence || "")}</q></article>`).join("")}<div class="record-unresolved"><b>Unresolved</b><ul>${(report.debate.unresolved || []).map(item => `<li>${escapeHtml(item)}</li>`).join("")}</ul></div></div></div>`;
-    detail.querySelector(".record-opinions").insertAdjacentHTML("beforebegin", coverageMarkup(report.profile));
     renderDebateLedger(detail.querySelector(".record-debate-heading"), report.debate);
     records.append(detail);
   });
