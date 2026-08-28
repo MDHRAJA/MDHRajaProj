@@ -21,12 +21,29 @@ function textFromResponse(response) {
   return response.output?.flatMap(item => item.content || []).filter(part => part.type === "output_text").map(part => part.text).join("\n") || "";
 }
 
-async function callModel({ apiKey, model }, instructions, input) {
-  if (!apiKey) throw new Error("Add OPENAI_API_KEY to a local .env file before running a live panel review.");
+async function callModel(config, instructions, input) {
+  if (config.provider === "gemini") {
+    if (!config.geminiApiKey) throw new Error("Add GEMINI_API_KEY to a local .env file before running a Gemini panel review.");
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(config.model)}:generateContent`, {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-goog-api-key": config.geminiApiKey },
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: instructions }] },
+        contents: [{ role: "user", parts: [{ text: input }] }],
+        generationConfig: { temperature: 0.2, responseMimeType: "application/json" }
+      })
+    });
+    const body = await response.json();
+    if (!response.ok) throw new Error(body.error?.message || "Gemini could not complete this review.");
+    const text = body.candidates?.[0]?.content?.parts?.map(part => part.text || "").join("\n") || "";
+    return parseJson(text);
+  }
+
+  if (!config.openaiApiKey) throw new Error("Add OPENAI_API_KEY to a local .env file before running an OpenAI panel review.");
   const response = await fetch("https://api.openai.com/v1/responses", {
     method: "POST",
-    headers: { "content-type": "application/json", authorization: `Bearer ${apiKey}` },
-    body: JSON.stringify({ model, store: false, instructions, input, temperature: 0.2 })
+    headers: { "content-type": "application/json", authorization: `Bearer ${config.openaiApiKey}` },
+    body: JSON.stringify({ model: config.model, store: false, instructions, input, temperature: 0.2 })
   });
   const body = await response.json();
   if (!response.ok) throw new Error(body.error?.message || "OpenAI could not complete this review.");
