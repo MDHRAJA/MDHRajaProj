@@ -34,7 +34,13 @@ createServer(async (req, res) => {
   try {
     if (req.method === "POST" && req.url === "/api/analyze") {
       const payload = await readJson(req);
-      const report = await runPanel(payload, { apiKey: process.env.OPENAI_API_KEY, model: process.env.OPENAI_MODEL || "gpt-4.1-mini" });
+      const provider = (process.env.AI_PROVIDER || (process.env.GEMINI_API_KEY ? "gemini" : "openai")).toLowerCase();
+      const report = await runPanel(payload, {
+        provider,
+        openaiApiKey: process.env.OPENAI_API_KEY,
+        geminiApiKey: process.env.GEMINI_API_KEY,
+        model: provider === "gemini" ? (process.env.GEMINI_MODEL || "gemini-3.7-flash") : (process.env.OPENAI_MODEL || "gpt-4.1-mini")
+      });
       return send(res, 200, report);
     }
     if (req.method !== "GET" && req.method !== "HEAD") return send(res, 405, { error: "Method not allowed" });
