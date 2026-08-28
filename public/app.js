@@ -28,16 +28,22 @@ document.addEventListener("change", async event => {
     if (!content.trim()) throw new Error("No readable text was found in this file.");
     const target = input.dataset.target ? $("#" + input.dataset.target) : input.closest("[data-candidate]").querySelector(`.candidate-${input.dataset.field}`);
     target.value = content;
+    if (input.dataset.target === "job-description") autoFillRole(content);
+    if (input.dataset.field === "resume") autoFillCandidateName(input.closest("[data-candidate]"), content);
     label.textContent = `${file.name} · ready`;
     updateBriefStatus();
   } catch (error) { label.textContent = "Could not read this file"; alert(error.message || "This file could not be read. Try copying its text into the field instead."); }
 });
-document.addEventListener("input", event => { if (event.target.matches("#role, #job-description, #hiring-count, .candidate-name, .candidate-resume, .candidate-transcript")) updateBriefStatus(); });
+document.addEventListener("input", event => {
+  if (event.target.matches("#job-description")) autoFillRole(event.target.value);
+  if (event.target.matches(".candidate-resume")) autoFillCandidateName(event.target.closest("[data-candidate]"), event.target.value);
+  if (event.target.matches("#role, #job-description, #hiring-count, .candidate-name, .candidate-resume, .candidate-transcript")) updateBriefStatus();
+});
 
 $("#add-candidate").addEventListener("click", () => {
   const count = document.querySelectorAll("[data-candidate]").length + 1;
   const card = document.createElement("article"); card.className = "candidate-card"; card.dataset.candidate = "";
-  card.innerHTML = `<header><span>Candidate ${String(count).padStart(2, "0")}</span><div><input class="candidate-name" placeholder="Candidate name (optional)" autocomplete="off" /><button type="button" class="remove-candidate">Remove</button></div></header><div class="materials-grid"><label class="field material"><span>Resume <small>paste text or load PDF/text</small></span><textarea class="candidate-resume" placeholder="Paste the candidate's resume…"></textarea><span class="upload-control"><input class="file-input" data-field="resume" type="file" accept=".pdf,.txt,.md,application/pdf,text/plain,text/markdown" /><b>Attach PDF or text file</b></span></label><label class="field material"><span>Interview transcript <small>paste text or load PDF/text</small></span><textarea class="candidate-transcript" placeholder="Paste the interview transcript…"></textarea><span class="upload-control"><input class="file-input" data-field="transcript" type="file" accept=".pdf,.txt,.md,application/pdf,text/plain,text/markdown" /><b>Attach PDF or text file</b></span></label></div>`;
+  card.innerHTML = `<header><span>Candidate ${String(count).padStart(2, "0")}</span><div><div class="name-entry"><input class="candidate-name" placeholder="Candidate name (optional)" autocomplete="off" /><small class="name-autofill">Auto-detected from resume when available</small></div><button type="button" class="remove-candidate">Remove</button></div></header><div class="materials-grid"><label class="field material"><span>Resume <small>paste text or load PDF/text</small></span><textarea class="candidate-resume" placeholder="Paste the candidate's resume…"></textarea><span class="upload-control"><input class="file-input" data-field="resume" type="file" accept=".pdf,.txt,.md,application/pdf,text/plain,text/markdown" /><b>Attach PDF or text file</b></span></label><label class="field material"><span>Interview transcript <small>paste text or load PDF/text</small></span><textarea class="candidate-transcript" placeholder="Paste the interview transcript…"></textarea><span class="upload-control"><input class="file-input" data-field="transcript" type="file" accept=".pdf,.txt,.md,application/pdf,text/plain,text/markdown" /><b>Attach PDF or text file</b></span></label></div>`;
   $("#candidate-stack").append(card); updateBriefStatus(); card.scrollIntoView({ behavior: "smooth", block: "center" });
 });
 document.addEventListener("click", event => { if (event.target.matches(".remove-candidate")) { event.target.closest("[data-candidate]").remove(); renumberCandidates(); updateBriefStatus(); } });
@@ -83,6 +89,51 @@ document.addEventListener("click", event => {
   if (action === "voice") playDebate();
   if (action === "export") exportReport();
 });
+
+function autoFillRole(text) {
+  const field = $("#role");
+  if (field.value.trim()) return;
+  const value = detectJobRole(text);
+  if (!value) return;
+  field.value = value;
+  field.classList.add("auto-filled");
+  $("#role-autofill").textContent = "Auto-filled from Job Description · edit anytime";
+  $("#role-autofill").classList.add("auto-detected");
+}
+
+function autoFillCandidateName(card, text) {
+  const field = card?.querySelector(".candidate-name");
+  if (!field || field.value.trim()) return;
+  const value = detectCandidateName(text);
+  if (!value) return;
+  field.value = value;
+  field.classList.add("auto-filled");
+  const note = card.querySelector(".name-autofill");
+  if (note) {
+    note.textContent = "Auto-filled from resume · edit anytime";
+    note.classList.add("auto-detected");
+  }
+}
+
+function detectJobRole(text) {
+  const lines = String(text || "").split(/\r?\n/).map(line => line.trim()).filter(Boolean).slice(0, 20);
+  const direct = lines.find(line => /^(job description|position|role|job title)\s*:/i.test(line));
+  if (direct) {
+    const value = direct.replace(/^(job description|position|role|job title)\s*:\s*/i, "").trim();
+    if (value && value.length < 110) return value;
+  }
+  return lines.find(line => /\b(engineer|designer|manager|developer|analyst|specialist|scientist|architect|lead|director)\b/i.test(line) && line.length < 110) || "";
+}
+
+function detectCandidateName(text) {
+  const lines = String(text || "").split(/\r?\n/).map(line => line.trim()).filter(Boolean).slice(0, 12);
+  return lines.find(line => {
+    const value = line.replace(/[|•·]/g, " ").trim();
+    const words = value.split(/\s+/);
+    return words.length >= 2 && words.length <= 4 && /^[A-Za-z][A-Za-z .'-]+$/.test(value)
+      && !/(resume|curriculum|experience|skills|education|summary|profile|engineer|designer|developer|manager|analyst|email|phone)/i.test(value);
+  }) || "";
+}
 
 function updateBriefStatus() {
   const candidates = [...document.querySelectorAll("[data-candidate]")]; const ready = candidates.filter(card => card.querySelector(".candidate-resume").value.trim() && card.querySelector(".candidate-transcript").value.trim()).length;
