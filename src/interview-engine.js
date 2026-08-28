@@ -24,19 +24,19 @@ function textFromResponse(response) {
 async function callModel(config, instructions, input) {
   if (config.provider === "gemini") {
     if (!config.geminiApiKey) throw new Error("Add GEMINI_API_KEY to a local .env file before running a Gemini panel review.");
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(config.model)}:generateContent`, {
-      method: "POST",
-      headers: { "content-type": "application/json", "x-goog-api-key": config.geminiApiKey },
-      body: JSON.stringify({
-        systemInstruction: { parts: [{ text: instructions }] },
-        contents: [{ role: "user", parts: [{ text: input }] }],
-        generationConfig: { temperature: 0.2, responseMimeType: "application/json" }
-      })
-    });
-    const body = await response.json();
-    if (!response.ok) throw new Error(body.error?.message || "Gemini could not complete this review.");
-    const text = body.candidates?.[0]?.content?.parts?.map(part => part.text || "").join("\n") || "";
-    return parseJson(text);
+    const models = [...new Set([config.model, config.fallbackModel].filter(Boolean))];
+    let lastError;
+    for (const model of models) {
+      for (let attempt = 0; attempt < 2; attempt += 1) {
+        try { return await requestGemini(config, model, instructions, input); }
+        catch (error) {
+          lastError = error;
+          if (!error.retryable || attempt === 1) break;
+          await new Promise(resolve => setTimeout(resolve, 900 * (attempt + 1)));
+        }
+      }
+    }
+    throw lastError;
   }
 
   if (!config.openaiApiKey) throw new Error("Add OPENAI_API_KEY to a local .env file before running an OpenAI panel review.");
@@ -48,6 +48,26 @@ async function callModel(config, instructions, input) {
   const body = await response.json();
   if (!response.ok) throw new Error(body.error?.message || "OpenAI could not complete this review.");
   return parseJson(textFromResponse(body));
+}
+
+async function requestGemini(config, model, instructions, input) {
+  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
+    method: "POST",
+    headers: { "content-type": "application/json", "x-goog-api-key": config.geminiApiKey },
+    body: JSON.stringify({
+      systemInstruction: { parts: [{ text: instructions }] },
+      contents: [{ role: "user", parts: [{ text: input }] }],
+      generationConfig: { temperature: 0.2, responseMimeType: "application/json" }
+    })
+  });
+  const body = await response.json();
+  if (!response.ok) {
+    const error = new Error(body.error?.message || "Gemini could not complete this review.");
+    error.retryable = response.status === 500 || response.status === 503;
+    throw error;
+  }
+  const text = body.candidates?.[0]?.content?.parts?.map(part => part.text || "").join("\n") || "";
+  return parseJson(text);
 }
 
 function commonInput({ role, resume, transcript }) {
