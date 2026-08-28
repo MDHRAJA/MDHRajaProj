@@ -10,6 +10,8 @@ An evidence-led multi-agent interview panel simulator. It builds one candidate p
 
 Both OpenAI and Gemini are supported. The API key remains server-side. The app expects pasted material or `.txt`/`.md` files for a resume and transcript.
 
+For Gemini, the application retries temporary 500/503 capacity errors once, then automatically retries the same call with `GEMINI_FALLBACK_MODEL`.
+
 ## Deliberation guarantee
 
 `src/interview-engine.js` intentionally calls the four persona reviews with `Promise.all`. Each call receives only the shared profile plus the source material—never another persona's conclusion. Only after they finish does the debate call receive the collected opinions, followed by a separate hiring-chair decision call.
