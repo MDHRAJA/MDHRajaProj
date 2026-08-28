@@ -16,9 +16,9 @@ For a hiring slate, add multiple candidates, set the number of open roles, and c
 
 For Gemini, the application retries temporary 500/503 capacity errors once, then automatically retries the same call with `GEMINI_FALLBACK_MODEL`. The default pair is `gemini-3.6-flash` and `gemini-3.1-flash-lite`.
 
-## Deploy to Render
+## Deploy to Vercel
 
-This repository includes `render.yaml` for a Node web service. In Render, create a new **Blueprint** from this GitHub repository and provide `GEMINI_API_KEY` when prompted. The key is marked as a secret and is never committed to GitHub or sent to the browser. Render uses `npm start` and checks `/health` before routing traffic to the service.
+Import this GitHub repository into a Vercel Hobby project. The `api/analyze.js` Vercel Function runs the same server-side panel workflow used locally. In **Project Settings → Environment Variables**, add `GEMINI_API_KEY` and optionally set `AI_PROVIDER=gemini`, `GEMINI_MODEL=gemini-3.6-flash`, and `GEMINI_FALLBACK_MODEL=gemini-3.1-flash-lite`. Never place the key in a `VITE_`, `NEXT_PUBLIC_`, or browser-exposed variable.
 
 ## Deliberation guarantee
 
