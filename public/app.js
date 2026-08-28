@@ -94,6 +94,7 @@ function renderReport(data) {
   });
   fragment.querySelector(".debate-summary").textContent = data.debate.summary;
   const exchanges = fragment.querySelector(".exchange-list"); data.debate.exchanges.forEach(item => { const row = document.createElement("article"); row.innerHTML = `<p><b>${escapeHtml(nameFor(item.speaker, data))}</b> <span>${escapeHtml(item.position)}</span> <b>${escapeHtml(nameFor(item.responding_to, data))}</b></p><p>${escapeHtml(item.response)}</p><q>${escapeHtml(item.evidence)}</q>`; exchanges.append(row); });
+  renderDebateLedger(exchanges, data.debate);
   list(fragment.querySelector(".unresolved-box ul"), data.debate.unresolved); list(fragment.querySelector(".strengths-list"), decision.strengths); list(fragment.querySelector(".concerns-list"), decision.concerns);
   fragment.querySelector(".next-step").textContent = decision.next_step; const factors = fragment.querySelector(".factors"); (decision.decision_factors || []).forEach(item => { const chip = document.createElement("p"); chip.innerHTML = `<b>${escapeHtml(item.weight)} weight</b> ${escapeHtml(item.factor)} — ${escapeHtml(item.reason)}`; factors.append(chip); });
   renderVisualInsights(fragment, data.opinions || []);
@@ -110,6 +111,19 @@ function renderVisualInsights(fragment, opinions) {
     item.innerHTML = `<span>${escapeHtml(name)}</span><div><i style="width:${confidence}%"></i></div><b>${confidence}%</b>`;
     bars.append(item);
   });
+}
+
+function ledgerMarkup(debate = {}) {
+  const agreement = (debate.agreements || []).map(item => `<li><b>${escapeHtml(item.topic || "Agreement")}</b><span>${escapeHtml((item.panelists || []).map(personaName).join(" · "))}</span><q>${escapeHtml(item.evidence || "Evidence not recorded")}</q></li>`).join("");
+  const disagreement = (debate.disagreements || []).map(item => `<li><b>${escapeHtml(item.topic || "Difference of view")}</b><span>${escapeHtml((item.panelists || []).map(personaName).join(" · "))} · ${escapeHtml(item.status || "unresolved")}</span><q>${escapeHtml(item.evidence || "Evidence not recorded")}</q></li>`).join("");
+  if (!agreement && !disagreement) return "";
+  return `<section class="debate-ledger"><div><p class="eyebrow">Deliberation ledger</p><h4>Every material point addressed</h4></div>${agreement ? `<article class="ledger-agreements"><b>Agreements</b><ul>${agreement}</ul></article>` : ""}${disagreement ? `<article class="ledger-disagreements"><b>Differences of view</b><ul>${disagreement}</ul></article>` : ""}</section>`;
+}
+
+function renderDebateLedger(exchanges, debate) {
+  const markup = ledgerMarkup(debate);
+  if (!markup) return;
+  exchanges.insertAdjacentHTML("beforebegin", markup);
 }
 
 document.addEventListener("click", event => {
@@ -189,6 +203,7 @@ function renderSlate(data) {
     verdicts.append(row);
     const detail = document.createElement("article"); detail.className = "interview-record";
     detail.innerHTML = `<div class="record-header"><span><b>Detailed Interview Record</b><small>${escapeHtml(report.candidate_name)} · evidence, debate, and decision</small></span></div><div class="record-body"><div class="record-overview"><div><p class="eyebrow">Candidate profile</p><h4>${escapeHtml(report.profile.candidate_name || report.candidate_name)}</h4><p>${escapeHtml(report.profile.headline || "")}</p></div><div><p class="eyebrow">Final chair decision</p><h4>${escapeHtml((report.decision.recommendation || "").replaceAll("_", " "))}</h4><p>${escapeHtml(report.decision.rationale || "")}</p></div></div><div class="record-opinions"><p class="eyebrow">Independent panel opinions</p>${(report.opinions || []).map(opinion => `<article><div><b>${escapeHtml(personaName(opinion.persona))}</b><span>${escapeHtml((opinion.recommendation || "").replaceAll("_", " "))} · ${escapeHtml(String(opinion.confidence || "—"))}% confidence</span></div><p>${escapeHtml(opinion.summary || "")}</p><dl><dt>Strength evidence</dt><dd>${escapeHtml(opinion.strengths?.[0]?.evidence || "No evidence recorded")}</dd><dt>Concern evidence</dt><dd>${escapeHtml(opinion.concerns?.[0]?.evidence || "No concern recorded")}</dd></dl></article>`).join("")}</div><div class="record-debate"><div class="record-debate-heading"><div><p class="eyebrow">Agreement &amp; disagreement in debate</p><h4>${escapeHtml(report.debate.summary || "")}</h4></div><div class="voice-player" data-report-index="${reportIndex}"><div class="voice-controls"><button class="voice-button" type="button" data-action="voice-play">▶ Listen</button><button class="voice-secondary" type="button" data-action="voice-pause" disabled>Pause</button><button class="voice-secondary" type="button" data-action="voice-stop" disabled>Stop</button></div><p class="voice-status" aria-live="polite">Listen speaker by speaker.</p></div></div>${(report.debate.exchanges || []).map(item => `<article><b>${escapeHtml(personaName(item.speaker))}</b><span>${escapeHtml(item.position)}</span><b>${escapeHtml(personaName(item.responding_to))}</b><p>${escapeHtml(item.response || "")}</p><q>${escapeHtml(item.evidence || "")}</q></article>`).join("")}<div class="record-unresolved"><b>Unresolved</b><ul>${(report.debate.unresolved || []).map(item => `<li>${escapeHtml(item)}</li>`).join("")}</ul></div></div></div>`;
+    renderDebateLedger(detail.querySelector(".record-debate-heading"), report.debate);
     records.append(detail);
   });
 }
@@ -228,9 +243,24 @@ function voiceTurn(item, report) {
   const respondent = nameFor(item.responding_to, report);
   return {
     speaker,
+    persona: item.speaker,
     text: `${speaker}, ${item.position || "responding"} ${respondent}. ${item.response || ""}${item.evidence ? ` Evidence cited: ${item.evidence}` : ""}`,
-    settings: { technical: [0.96, 0.9], culture: [1.02, 1.15], manager: [0.98, 1], skeptic: [0.93, 0.78] }[item.speaker] || [0.98, 1]
+    settings: { technical: [0.96, 0.9], culture: [1.02, 1.15], manager: [0.98, 0.94], skeptic: [0.96, 1.08] }[item.speaker] || [0.98, 1]
   };
+}
+
+const personaVoiceHints = {
+  technical: /david|mark|guy|george|james|daniel|alex|male/i,
+  culture: /zira|samantha|aria|jenny|hazel|ava|susan|female/i,
+  manager: /david|mark|guy|george|james|daniel|alex|male/i,
+  skeptic: /zira|samantha|aria|jenny|hazel|ava|susan|female/i
+};
+
+function voiceForPersona(persona) {
+  const voices = window.speechSynthesis?.getVoices?.() || [];
+  const preferred = voices.find(voice => personaVoiceHints[persona]?.test(`${voice.name} ${voice.voiceURI}`));
+  if (preferred) return preferred;
+  return voices.find(voice => /^en(?:-|_)/i.test(voice.lang)) || null;
 }
 
 function playDebate(control) {
@@ -252,6 +282,8 @@ function speakNextTurn(session) {
   const utterance = new SpeechSynthesisUtterance(turn.text);
   utterance.rate = turn.settings[0];
   utterance.pitch = turn.settings[1];
+  const voice = voiceForPersona(turn.persona);
+  if (voice) utterance.voice = voice;
   utterance.onstart = () => { if (speechSession === session) updateVoicePlayer(session.player, "playing", `Now speaking: ${turn.speaker}`); };
   utterance.onend = () => { if (speechSession === session && !session.stopped) speakNextTurn(session); };
   utterance.onerror = () => { if (speechSession === session && !session.stopped) { updateVoicePlayer(session.player, "idle", "Playback stopped. Try listening again."); speechSession = null; } };
