@@ -10,6 +10,8 @@ An evidence-led multi-agent interview panel simulator. It builds one candidate p
 
 Both OpenAI and Gemini are supported. The API key remains server-side. The app accepts pasted material, PDF, `.txt`, or `.md` files for the resume, interview transcript, and detailed job description. PDF text is extracted in the browser before analysis. The job description is provided to every panel stage and is explicitly weighed in the final role-alignment decision.
 
+When the Job Description or resume is added, Panelroom can suggest the Target Role and candidate name automatically. Those suggestions fill only blank fields and remain editable at all times.
+
 For a hiring slate, add multiple candidates, set the number of open roles, and convene the panel. Each candidate receives a complete independent panel and debate before a separate hiring-committee call compares the complete records and selects the evidence-backed shortlist.
 
 For Gemini, the application retries temporary 500/503 capacity errors once, then automatically retries the same call with `GEMINI_FALLBACK_MODEL`. The default pair is `gemini-3.6-flash` and `gemini-3.1-flash-lite`.
