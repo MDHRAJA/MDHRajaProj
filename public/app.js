@@ -3,13 +3,14 @@ let latestReport = null;
 const sample = {
   role: "Senior Product Designer",
   resume: `Alex Morgan\nProduct Designer | 7 years experience\n\nExperience\n• Lead Product Designer, Orbit Health (2021–present): Led the redesign of a clinician workflow used by 12,000 care providers. Partnered with engineering and research; reduced task completion time by 28%.\n• Product Designer, Ledgerline (2018–2021): Shipped invoicing and payment flows for small businesses.\n\nSkills\nFigma, prototyping, user research, design systems, accessibility, product strategy.\n\nEducation\nBDes, Interaction Design, 2018.`,
-  transcript: `Interviewer: Tell me about the clinician workflow redesign.\nAlex: I led the project from discovery through launch. I ran six usability sessions, mapped the critical path with the PM, and worked with two engineers on a phased release. The old flow took about eight minutes; after launch it averaged just under six.\n\nInterviewer: What was difficult?\nAlex: Our first prototype assumed clinicians would review alerts one at a time. Testing showed that was wrong, so I pushed to change the information hierarchy. I was initially defensive because it meant reworking the system, but I documented the findings and brought engineering into the next sessions.\n\nInterviewer: How do you measure design quality?\nAlex: I look for successful completion, error rate, and whether people can explain why they made a choice. I use qualitative signals alongside product data.\n\nInterviewer: You list design systems. What did you own?\nAlex: I maintained the component inventory and wrote contribution guidance. I did not build the front-end components myself, but I paired with engineering on tokens and accessibility states.\n\nInterviewer: Why this role?\nAlex: I want a role where I can work on ambiguous workflows and coach designers while staying close to research.`
+  transcript: `Interviewer: Tell me about the clinician workflow redesign.\nAlex: I led the project from discovery through launch. I ran six usability sessions, mapped the critical path with the PM, and worked with two engineers on a phased release. The old flow took about eight minutes; after launch it averaged just under six.\n\nInterviewer: What was difficult?\nAlex: Our first prototype assumed clinicians would review alerts one at a time. Testing showed that was wrong, so I pushed to change the information hierarchy. I was initially defensive because it meant reworking the system, but I documented the findings and brought engineering into the next sessions.\n\nInterviewer: How do you measure design quality?\nAlex: I look for successful completion, error rate, and whether people can explain why they made a choice. I use qualitative signals alongside product data.\n\nInterviewer: You list design systems. What did you own?\nAlex: I maintained the component inventory and wrote contribution guidance. I did not build the front-end components myself, but I paired with engineering on tokens and accessibility states.\n\nInterviewer: Why this role?\nAlex: I want a role where I can work on ambiguous workflows and coach designers while staying close to research.`,
+  jobDescription: `Senior Product Designer\n\nYou will own end-to-end workflow design for a clinical operations product. You will partner with product managers, engineers, and researchers to simplify complex workflows, guide a scalable design system, and use qualitative and quantitative evidence to improve outcomes.\n\nMust have: 5+ years of product design experience, strong Figma and prototyping skills, research practice, accessibility knowledge, clear stakeholder communication, and experience shipping complex workflow products.\n\nNice to have: healthcare or regulated-domain experience; coaching other designers.`
 };
 
 const stageCopy = ["Building the shared evidence file…", "Four panelists are reviewing independently…", "Opening the evidence-based debate…", "The hiring chair is weighing the record…"];
 
 $("#load-sample").addEventListener("click", () => {
-  $("#role").value = sample.role; $("#resume").value = sample.resume; $("#transcript").value = sample.transcript;
+  $("#role").value = sample.role; $("#resume").value = sample.resume; $("#transcript").value = sample.transcript; $("#job-description").value = sample.jobDescription;
   updateBriefStatus();
   document.querySelector(".workspace").scrollIntoView({ behavior: "smooth", block: "start" });
 });
@@ -27,11 +28,11 @@ document.querySelectorAll(".file-input").forEach(input => input.addEventListener
     updateBriefStatus();
   } catch (error) { label.textContent = "Could not read this file"; alert(error.message || "This file could not be read. Try copying its text into the field instead."); }
 }));
-document.querySelectorAll("#role, #resume, #transcript").forEach(input => input.addEventListener("input", updateBriefStatus));
+document.querySelectorAll("#role, #resume, #transcript, #job-description").forEach(input => input.addEventListener("input", updateBriefStatus));
 
 $("#run-panel").addEventListener("click", async () => {
-  const payload = { role: $("#role").value.trim(), resume: $("#resume").value.trim(), transcript: $("#transcript").value.trim() };
-  if (!payload.role || !payload.resume || !payload.transcript) { alert("Add the target role, resume, and interview transcript first."); return; }
+  const payload = { role: $("#role").value.trim(), resume: $("#resume").value.trim(), transcript: $("#transcript").value.trim(), jobDescription: $("#job-description").value.trim() };
+  if (!payload.role || !payload.resume || !payload.transcript || !payload.jobDescription) { alert("Add the target role, resume, interview transcript, and detailed job description first."); return; }
   const results = $("#results"), button = $("#run-panel"), status = $("#status"), timeline = $("#run-timeline");
   results.classList.remove("hidden"); results.scrollIntoView({ behavior: "smooth", block: "start" }); button.disabled = true; $("#report").innerHTML = "";
   timeline.classList.remove("hidden"); let stage = 0; setTimeline(stage); status.innerHTML = `<span class="pulse"></span><span>${stageCopy[stage]}</span>`;
@@ -48,9 +49,10 @@ function renderReport(data) {
   const fragment = $("#report-template").content.cloneNode(true), decision = data.decision, profile = data.profile;
   const label = decision.recommendation.replaceAll("_", " ");
   fragment.querySelector(".decision-label").textContent = label; fragment.querySelector(".decision-rationale").textContent = decision.rationale;
+  fragment.querySelector(".role-fit").textContent = `Role alignment: ${decision.role_alignment || "assessed"}${decision.role_fit_summary ? ` · ${decision.role_fit_summary}` : ""}`;
   fragment.querySelector(".confidence strong").textContent = `${decision.confidence}%`; fragment.querySelector(".confidence i").style.width = `${decision.confidence}%`;
   fragment.querySelector(".candidate-name").textContent = profile.candidate_name || "Candidate"; fragment.querySelector(".headline").textContent = profile.headline || "Evidence profile";
-  fillEvidence(fragment.querySelector(".skills-list"), profile.skills, "name"); fillEvidence(fragment.querySelector(".claims-list"), profile.claims, "claim");
+  fillEvidence(fragment.querySelector(".skills-list"), profile.skills, "name"); fillEvidence(fragment.querySelector(".requirements-list"), profile.role_requirements, "requirement"); fillEvidence(fragment.querySelector(".claims-list"), profile.claims, "claim");
   const grid = fragment.querySelector(".opinion-grid"); data.opinions.forEach(opinion => {
     const persona = data.meta.personas.find(item => item.id === opinion.persona) || {}; const card = document.createElement("article");
     card.className = `opinion-card ${persona.color || ""}`; card.innerHTML = `<div class="opinion-top"><div><span class="persona-dot"></span><p>${escapeHtml(persona.role || opinion.persona)}</p><h4>${escapeHtml(persona.name || opinion.persona)}</h4></div><b>${escapeHtml(opinion.recommendation.replaceAll("_", " "))}</b></div><p class="opinion-summary">${escapeHtml(opinion.summary)}</p><div class="evidence-group"><span>Evidence</span>${(opinion.strengths || []).slice(0,1).map(item => `<p><b>${escapeHtml(item.point)}</b><q>${escapeHtml(item.evidence)}</q></p>`).join("")}${(opinion.concerns || []).slice(0,1).map(item => `<p><b>${escapeHtml(item.point)}</b><q>${escapeHtml(item.evidence)}</q></p>`).join("")}</div><p class="confidence-small">Confidence ${opinion.confidence}%</p>`; grid.append(card);
@@ -69,8 +71,8 @@ document.addEventListener("click", event => {
 });
 
 function updateBriefStatus() {
-  const filled = [$("#role").value, $("#resume").value, $("#transcript").value].filter(value => value.trim()).length;
-  $("#brief-status").textContent = filled === 3 ? "Brief complete · ready to convene" : `${filled}/3 materials ready`;
+  const filled = [$("#role").value, $("#resume").value, $("#transcript").value, $("#job-description").value].filter(value => value.trim()).length;
+  $("#brief-status").textContent = filled === 4 ? "Brief complete · ready to convene" : `${filled}/4 materials ready`;
 }
 
 function setTimeline(stage, complete = false) {
@@ -92,7 +94,7 @@ function playDebate() {
 function exportReport() {
   if (!latestReport) return;
   const d = latestReport.decision, p = latestReport.profile;
-  const markdown = `# Panelroom interview record\n\n## ${p.candidate_name || "Candidate"}\n${p.headline || ""}\n\n## Final recommendation\n**${d.recommendation.replaceAll("_", " ")}** · ${d.confidence}% confidence\n\n${d.rationale}\n\n## Strengths\n${(d.strengths || []).map(item => `- ${item}`).join("\n")}\n\n## Concerns\n${(d.concerns || []).map(item => `- ${item}`).join("\n")}\n\n## Unresolved disagreement\n${(d.unresolved_disagreements || []).map(item => `- ${item}`).join("\n")}\n\n## Next step\n${d.next_step}\n\n## Panel debate\n${latestReport.debate.exchanges.map(item => `- **${nameFor(item.speaker, latestReport)}** (${item.position} ${nameFor(item.responding_to, latestReport)}): ${item.response}`).join("\n")}`;
+  const markdown = `# Panelroom interview record\n\n## ${p.candidate_name || "Candidate"}\n${p.headline || ""}\n\n## Final recommendation\n**${d.recommendation.replaceAll("_", " ")}** · ${d.confidence}% confidence\n\n**Role alignment:** ${d.role_alignment || "assessed"}\n${d.role_fit_summary || ""}\n\n${d.rationale}\n\n## Strengths\n${(d.strengths || []).map(item => `- ${item}`).join("\n")}\n\n## Concerns\n${(d.concerns || []).map(item => `- ${item}`).join("\n")}\n\n## Unresolved disagreement\n${(d.unresolved_disagreements || []).map(item => `- ${item}`).join("\n")}\n\n## Next step\n${d.next_step}\n\n## Panel debate\n${latestReport.debate.exchanges.map(item => `- **${nameFor(item.speaker, latestReport)}** (${item.position} ${nameFor(item.responding_to, latestReport)}): ${item.response}`).join("\n")}`;
   const url = URL.createObjectURL(new Blob([markdown], { type: "text/markdown" })); const link = document.createElement("a");
   link.href = url; link.download = "panelroom-interview-record.md"; link.click(); URL.revokeObjectURL(url);
 }
