@@ -10,7 +10,7 @@ An evidence-led multi-agent interview panel simulator. It builds one candidate p
 
 Both OpenAI and Gemini are supported. The API key remains server-side. The app expects pasted material or `.txt`/`.md` files for a resume and transcript.
 
-For Gemini, the application retries temporary 500/503 capacity errors once, then automatically retries the same call with `GEMINI_FALLBACK_MODEL`.
+For Gemini, the application retries temporary 500/503 capacity errors once, then automatically retries the same call with `GEMINI_FALLBACK_MODEL`. The default pair is `gemini-3.6-flash` and `gemini-3.1-flash-lite`.
 
 ## Deliberation guarantee
 
