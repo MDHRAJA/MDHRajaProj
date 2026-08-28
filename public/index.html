@@ -14,26 +14,27 @@
     <main class="shell">
       <header class="topbar">
         <a class="brand" href="/" aria-label="Panelroom home"><span class="brand-mark">P</span>Panelroom</a>
-        <div class="secure-note"><i></i> Evidence-led hiring decisions</div>
+        <nav class="topnav" aria-label="Product navigation"><a href="#process">Method</a><a href="#results">Panel record</a><span class="secure-note"><i></i> Evidence-led</span></nav>
       </header>
 
       <section class="intro">
-        <p class="eyebrow">Multi-agent interview panel</p>
-        <h1>Get the whole room,<br /><em>not one opinion.</em></h1>
-        <p class="lede">Turn a resume and interview transcript into an evidence-backed panel discussion—with independent reviewers, direct challenge, and a reasoned hiring decision.</p>
+        <div><p class="eyebrow">Multi-agent interview panel</p><h1>Get the whole room,<br /><em>not one opinion.</em></h1><p class="lede">Turn a resume and interview transcript into an evidence-backed panel discussion—with independent reviewers, direct challenge, and a reasoned hiring decision.</p></div>
+        <aside class="hero-panel" aria-label="Panel composition"><p class="eyebrow">Your interview room</p><div class="hero-avatars"><span class="violet">AC</span><span class="sky">MP</span><span class="amber">JB</span><span class="coral">NK</span></div><p><b>4 independent perspectives</b><br />One shared evidence file. No groupthink until debate.</p><div class="signal-row"><span><i></i> Evidence cited</span><span><i></i> Separate calls</span></div></aside>
       </section>
 
       <section class="workspace" aria-label="Candidate material">
         <div class="section-heading"><span>01</span><div><h2>Set the brief</h2><p>Everything the panel sees is shown here.</p></div></div>
-        <div class="input-grid">
-          <label class="field role-field"><span>Target role</span><input id="role" placeholder="e.g. Senior Product Designer" autocomplete="off" /></label>
-          <button class="sample-button" id="load-sample" type="button">Load a sample candidate <span>↗</span></button>
+        <div class="workspace-grid">
+          <div class="entry-area">
+            <div class="input-grid"><label class="field role-field"><span>Target role</span><input id="role" placeholder="e.g. Senior Product Designer" autocomplete="off" /></label><button class="sample-button" id="load-sample" type="button">Load a sample candidate <span>↗</span></button></div>
+            <div class="materials-grid">
+              <label class="field material"><span>Resume <small>paste text or load .txt/.md</small></span><textarea id="resume" placeholder="Paste the candidate's resume…"></textarea><span class="upload-control"><input class="file-input" data-target="resume" type="file" accept=".txt,.md,text/plain,text/markdown" /><b>Attach a text file</b></span></label>
+              <label class="field material"><span>Interview transcript <small>paste text or load .txt/.md</small></span><textarea id="transcript" placeholder="Paste the interview transcript…"></textarea><span class="upload-control"><input class="file-input" data-target="transcript" type="file" accept=".txt,.md,text/plain,text/markdown" /><b>Attach a text file</b></span></label>
+            </div>
+          </div>
+          <aside class="roster"><div class="roster-title"><div><p class="eyebrow">Panel roster</p><h3>Four seats, four lenses</h3></div><span class="live-pill">ready</span></div><div class="roster-list"><article><span class="persona-dot violet"></span><div><b>Ari Chen</b><small>Technical depth</small></div><em>01</em></article><article><span class="persona-dot sky"></span><div><b>Maya Patel</b><small>People &amp; culture</small></div><em>02</em></article><article><span class="persona-dot amber"></span><div><b>Jon Bell</b><small>Role &amp; impact</small></div><em>03</em></article><article><span class="persona-dot coral"></span><div><b>Noor Khan</b><small>Risk &amp; evidence</small></div><em>04</em></article></div><div class="roster-note"><span>⊕</span><p>Every reviewer sees the same source material—but no peer conclusions until deliberation.</p></div></aside>
         </div>
-        <div class="materials-grid">
-          <label class="field material"><span>Resume <small>paste text or load .txt/.md</small></span><textarea id="resume" placeholder="Paste the candidate's resume…"></textarea><input class="file-input" data-target="resume" type="file" accept=".txt,.md,text/plain,text/markdown" /></label>
-          <label class="field material"><span>Interview transcript <small>paste text or load .txt/.md</small></span><textarea id="transcript" placeholder="Paste the interview transcript…"></textarea><input class="file-input" data-target="transcript" type="file" accept=".txt,.md,text/plain,text/markdown" /></label>
-        </div>
-        <div class="run-row"><p><b>Privacy note:</b> Your material is sent only to the configured server-side model call. It is not retained by Panelroom.</p><button id="run-panel" class="run-button" type="button">Convene the panel <span>→</span></button></div>
+        <div class="run-row"><p><b>Privacy note:</b> Your material is sent only to the configured server-side model call. It is not retained by Panelroom.</p><div class="run-actions"><span id="brief-status">Awaiting candidate material</span><button id="run-panel" class="run-button" type="button">Convene the panel <span>→</span></button></div></div>
       </section>
 
       <section id="process" class="process" aria-label="How it works">
@@ -48,6 +49,7 @@
       <section id="results" class="results hidden" aria-live="polite">
         <div class="section-heading"><span>03</span><div><h2>Panel record</h2><p id="result-subtitle">Evidence and deliberation.</p></div></div>
         <div id="status" class="status-card"><span class="pulse"></span><span>Preparing the panel record…</span></div>
+        <div id="run-timeline" class="run-timeline hidden" aria-label="Panel progress"><article data-stage="0"><span>1</span><p>Evidence file</p></article><i></i><article data-stage="1"><span>2</span><p>Independent reads</p></article><i></i><article data-stage="2"><span>3</span><p>Panel debate</p></article><i></i><article data-stage="3"><span>4</span><p>Hiring decision</p></article></div>
         <div id="report"></div>
       </section>
     </main>
@@ -55,8 +57,9 @@
       <div class="decision-card"><div><p class="eyebrow">Final recommendation</p><h2 class="decision-label"></h2><p class="decision-rationale"></p></div><div class="confidence"><span>Confidence</span><strong></strong><div class="confidence-track"><i></i></div></div></div>
       <div class="profile-card"><div class="profile-header"><div><p class="eyebrow">Candidate profile</p><h3 class="candidate-name"></h3></div><p class="headline"></p></div><div class="fact-columns"><div><h4>Supported skills</h4><ul class="skills-list"></ul></div><div><h4>Claims to validate</h4><ul class="claims-list"></ul></div></div></div>
       <div class="report-section"><div class="section-title"><p class="eyebrow">Independent opinions</p><h3>Four lenses. No groupthink.</h3><p>Each opinion was generated in a separate call before the panel debate.</p></div><div class="opinion-grid"></div></div>
-      <div class="debate-card"><p class="eyebrow">Panel debate</p><h3 class="debate-summary"></h3><div class="exchange-list"></div><div class="unresolved-box"><b>Still unresolved</b><ul></ul></div></div>
+      <div class="debate-card"><div class="debate-heading"><div><p class="eyebrow">Panel debate</p><h3 class="debate-summary"></h3></div><button class="voice-button" type="button" data-action="voice">♬ Play debate</button></div><div class="exchange-list"></div><div class="unresolved-box"><b>Still unresolved</b><ul></ul></div></div>
       <div class="closing-grid"><article><p class="eyebrow">Strengths</p><ul class="strengths-list"></ul></article><article><p class="eyebrow">Concerns</p><ul class="concerns-list"></ul></article><article><p class="eyebrow">Next step</p><p class="next-step"></p><div class="factors"></div></article></div>
+      <div class="report-footer"><p>Decision created from cited candidate material and recorded panel deliberation.</p><button class="export-button" type="button" data-action="export">Export panel record ↓</button></div>
     </template>
     <script type="module" src="/app.js"></script>
   </body>
