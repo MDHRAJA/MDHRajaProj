@@ -100,30 +100,8 @@ function renderReport(data) {
   $("#report").replaceChildren(fragment);
 }
 
-function voteBucket(recommendation = "") {
-  if (/strong_yes|^yes$/i.test(recommendation)) return "yes";
-  if (/mixed|hold/i.test(recommendation)) return "mixed";
-  return "no";
-}
-
-function renderVoteChart(root, opinions) {
-  const counts = { yes: 0, mixed: 0, no: 0 };
-  opinions.forEach(opinion => { counts[voteBucket(opinion.recommendation)] += 1; });
-  const total = opinions.length || 1;
-  const yes = Math.round((counts.yes / total) * 100);
-  const mixed = Math.round((counts.mixed / total) * 100);
-  const no = Math.max(0, 100 - yes - mixed);
-  const donut = root.querySelector(".vote-donut");
-  donut.style.setProperty("--yes", `${yes}%`);
-  donut.style.setProperty("--mixed-end", `${yes + mixed}%`);
-  donut.querySelector("span").innerHTML = `<b>${opinions.length}</b><small>votes</small>`;
-  donut.setAttribute("aria-label", `${counts.yes} supportive, ${counts.mixed} mixed, and ${counts.no} cautious panel votes`);
-  const legend = root.querySelector(".vote-legend");
-  legend.innerHTML = `<span class="yes"><i></i>Supportive <b>${counts.yes}</b></span><span class="mixed"><i></i>Mixed <b>${counts.mixed}</b></span><span class="no"><i></i>Cautious <b>${counts.no}</b></span>`;
-}
-
 function renderVisualInsights(fragment, opinions) {
-  renderVoteChart(fragment, opinions);
+  fragment.querySelector(".visual-insights > article:first-child")?.remove();
   const bars = fragment.querySelector(".confidence-bars-chart");
   opinions.forEach(opinion => {
     const item = document.createElement("div");
@@ -204,10 +182,6 @@ function renderSlate(data) {
   (slate.comparison || []).forEach(item => { const row = document.createElement("article"); row.innerHTML = `<div><b>${escapeHtml(item.candidate_name)}</b><span>Rank #${item.rank}</span></div><div class="score-bars"><p><span>Readiness</span><i style="width:${item.readiness}%"></i><b>${item.readiness}</b></p><p><span>Role fit</span><i style="width:${item.role_fit}%"></i><b>${item.role_fit}</b></p><p class="risk"><span>Risk</span><i style="width:${item.risk}%"></i><b>${item.risk}</b></p></div><small>${escapeHtml(item.summary)}</small>`; chart.append(row); });
   const shortlist = fragment.querySelector(".shortlist-grid"); (slate.selected_candidates || []).forEach(item => { const card = document.createElement("article"); card.innerHTML = `<span>Hire-ready · rank #${item.rank}</span><h4>${escapeHtml(item.candidate_name)}</h4><p>${escapeHtml(item.rationale)}</p><b>Suggested next step</b><p>${escapeHtml(item.next_step)}</p>`; shortlist.append(card); });
   list(fragment.querySelector(".slate-risk ul"), slate.unresolved_tradeoffs); $("#report").replaceChildren(fragment);
-  const slateVoteVisual = document.createElement("div"); slateVoteVisual.className = "slate-vote-visual";
-  slateVoteVisual.innerHTML = `<div class="vote-donut compact" role="img"><span></span></div><div class="vote-legend compact"></div>`;
-  $("#report .panel-verdicts > div:first-child").append(slateVoteVisual);
-  renderVoteChart(slateVoteVisual, data.candidates.flatMap(report => report.opinions || []));
   const verdicts = $("#report .panel-verdicts tbody"), records = $("#report .record-list");
   data.candidates.forEach((report, reportIndex) => {
     const row = document.createElement("tr"), opinions = Object.fromEntries((report.opinions || []).map(item => [item.persona, item]));
