@@ -32,9 +32,6 @@ async function readJson(req) {
 
 createServer(async (req, res) => {
   try {
-    if (req.method === "GET" && req.url === "/health") {
-      return send(res, 200, { status: "ok" });
-    }
     if (req.method === "POST" && req.url === "/api/analyze") {
       const payload = await readJson(req);
       const provider = (process.env.AI_PROVIDER || (process.env.GEMINI_API_KEY ? "gemini" : "openai")).toLowerCase();
