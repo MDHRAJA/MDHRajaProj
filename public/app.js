@@ -10,6 +10,20 @@ const sample = {
 
 const stageCopy = ["Building the shared evidence file…", "Four panelists are reviewing independently…", "Opening the evidence-based debate…", "The hiring chair is weighing the record…"];
 
+function applyTheme(theme) {
+  document.documentElement.dataset.theme = theme;
+  localStorage.setItem("panelroom-theme", theme);
+  const toggle = document.querySelector('[data-action="theme"]');
+  if (toggle) {
+    const dark = theme === "dark";
+    toggle.setAttribute("aria-pressed", String(dark));
+    toggle.querySelector("span").textContent = dark ? "☀" : "☾";
+    toggle.querySelector("b").textContent = dark ? "Light mode" : "Dark mode";
+  }
+}
+
+applyTheme(localStorage.getItem("panelroom-theme") || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"));
+
 $("#load-sample").addEventListener("click", () => {
   const candidate = document.querySelector("[data-candidate]");
   $("#role").value = sample.role; candidate.querySelector(".candidate-name").value = "Alex Morgan"; candidate.querySelector(".candidate-resume").value = sample.resume; candidate.querySelector(".candidate-transcript").value = sample.transcript; $("#job-description").value = sample.jobDescription;
@@ -82,7 +96,42 @@ function renderReport(data) {
   const exchanges = fragment.querySelector(".exchange-list"); data.debate.exchanges.forEach(item => { const row = document.createElement("article"); row.innerHTML = `<p><b>${escapeHtml(nameFor(item.speaker, data))}</b> <span>${escapeHtml(item.position)}</span> <b>${escapeHtml(nameFor(item.responding_to, data))}</b></p><p>${escapeHtml(item.response)}</p><q>${escapeHtml(item.evidence)}</q>`; exchanges.append(row); });
   list(fragment.querySelector(".unresolved-box ul"), data.debate.unresolved); list(fragment.querySelector(".strengths-list"), decision.strengths); list(fragment.querySelector(".concerns-list"), decision.concerns);
   fragment.querySelector(".next-step").textContent = decision.next_step; const factors = fragment.querySelector(".factors"); (decision.decision_factors || []).forEach(item => { const chip = document.createElement("p"); chip.innerHTML = `<b>${escapeHtml(item.weight)} weight</b> ${escapeHtml(item.factor)} — ${escapeHtml(item.reason)}`; factors.append(chip); });
+  renderVisualInsights(fragment, data.opinions || []);
   $("#report").replaceChildren(fragment);
+}
+
+function voteBucket(recommendation = "") {
+  if (/strong_yes|^yes$/i.test(recommendation)) return "yes";
+  if (/mixed|hold/i.test(recommendation)) return "mixed";
+  return "no";
+}
+
+function renderVoteChart(root, opinions) {
+  const counts = { yes: 0, mixed: 0, no: 0 };
+  opinions.forEach(opinion => { counts[voteBucket(opinion.recommendation)] += 1; });
+  const total = opinions.length || 1;
+  const yes = Math.round((counts.yes / total) * 100);
+  const mixed = Math.round((counts.mixed / total) * 100);
+  const no = Math.max(0, 100 - yes - mixed);
+  const donut = root.querySelector(".vote-donut");
+  donut.style.setProperty("--yes", `${yes}%`);
+  donut.style.setProperty("--mixed-end", `${yes + mixed}%`);
+  donut.querySelector("span").innerHTML = `<b>${opinions.length}</b><small>votes</small>`;
+  donut.setAttribute("aria-label", `${counts.yes} supportive, ${counts.mixed} mixed, and ${counts.no} cautious panel votes`);
+  const legend = root.querySelector(".vote-legend");
+  legend.innerHTML = `<span class="yes"><i></i>Supportive <b>${counts.yes}</b></span><span class="mixed"><i></i>Mixed <b>${counts.mixed}</b></span><span class="no"><i></i>Cautious <b>${counts.no}</b></span>`;
+}
+
+function renderVisualInsights(fragment, opinions) {
+  renderVoteChart(fragment, opinions);
+  const bars = fragment.querySelector(".confidence-bars-chart");
+  opinions.forEach(opinion => {
+    const item = document.createElement("div");
+    const name = personaName(opinion.persona).split(" · ")[0];
+    const confidence = Math.max(0, Math.min(100, Number(opinion.confidence) || 0));
+    item.innerHTML = `<span>${escapeHtml(name)}</span><div><i style="width:${confidence}%"></i></div><b>${confidence}%</b>`;
+    bars.append(item);
+  });
 }
 
 document.addEventListener("click", event => {
@@ -92,6 +141,7 @@ document.addEventListener("click", event => {
   if (action === "voice-pause") pauseDebate(control);
   if (action === "voice-stop") stopDebate();
   if (action === "export") exportReport();
+  if (action === "theme") applyTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark");
 });
 
 function autoFillRole(text) {
@@ -154,6 +204,10 @@ function renderSlate(data) {
   (slate.comparison || []).forEach(item => { const row = document.createElement("article"); row.innerHTML = `<div><b>${escapeHtml(item.candidate_name)}</b><span>Rank #${item.rank}</span></div><div class="score-bars"><p><span>Readiness</span><i style="width:${item.readiness}%"></i><b>${item.readiness}</b></p><p><span>Role fit</span><i style="width:${item.role_fit}%"></i><b>${item.role_fit}</b></p><p class="risk"><span>Risk</span><i style="width:${item.risk}%"></i><b>${item.risk}</b></p></div><small>${escapeHtml(item.summary)}</small>`; chart.append(row); });
   const shortlist = fragment.querySelector(".shortlist-grid"); (slate.selected_candidates || []).forEach(item => { const card = document.createElement("article"); card.innerHTML = `<span>Hire-ready · rank #${item.rank}</span><h4>${escapeHtml(item.candidate_name)}</h4><p>${escapeHtml(item.rationale)}</p><b>Suggested next step</b><p>${escapeHtml(item.next_step)}</p>`; shortlist.append(card); });
   list(fragment.querySelector(".slate-risk ul"), slate.unresolved_tradeoffs); $("#report").replaceChildren(fragment);
+  const slateVoteVisual = document.createElement("div"); slateVoteVisual.className = "slate-vote-visual";
+  slateVoteVisual.innerHTML = `<div class="vote-donut compact" role="img"><span></span></div><div class="vote-legend compact"></div>`;
+  $("#report .panel-verdicts > div:first-child").append(slateVoteVisual);
+  renderVoteChart(slateVoteVisual, data.candidates.flatMap(report => report.opinions || []));
   const verdicts = $("#report .panel-verdicts tbody"), records = $("#report .record-list");
   data.candidates.forEach((report, reportIndex) => {
     const row = document.createElement("tr"), opinions = Object.fromEntries((report.opinions || []).map(item => [item.persona, item]));
