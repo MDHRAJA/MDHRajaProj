@@ -1,0 +1,2 @@
+.materials-grid .job-description{grid-column:1/-1}.job-description textarea{height:170px}.fact-columns{grid-template-columns:repeat(3,1fr)}.role-fit{font:11px "DM Mono",monospace;text-transform:uppercase;letter-spacing:.04em;color:#b8d87d;margin:0 0 13px}.role-fit::first-letter{text-transform:uppercase}@media(max-width:720px){.materials-grid .job-description{grid-column:auto}.fact-columns{grid-template-columns:1fr}.job-description textarea{height:190px}}
+
