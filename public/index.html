@@ -9,6 +9,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="/styles.css" />
+    <link rel="stylesheet" href="/enhancements.css" />
   </head>
   <body>
     <main class="shell">
@@ -30,6 +31,7 @@
             <div class="materials-grid">
               <label class="field material"><span>Resume <small>paste text or load PDF/text</small></span><textarea id="resume" placeholder="Paste the candidate's resume…"></textarea><span class="upload-control"><input class="file-input" data-target="resume" type="file" accept=".pdf,.txt,.md,application/pdf,text/plain,text/markdown" /><b>Attach PDF or text file</b></span></label>
               <label class="field material"><span>Interview transcript <small>paste text or load PDF/text</small></span><textarea id="transcript" placeholder="Paste the interview transcript…"></textarea><span class="upload-control"><input class="file-input" data-target="transcript" type="file" accept=".pdf,.txt,.md,application/pdf,text/plain,text/markdown" /><b>Attach PDF or text file</b></span></label>
+              <label class="field material job-description"><span>Detailed job description <small>used to assess role fit</small></span><textarea id="job-description" placeholder="Paste the full job description, responsibilities, must-have skills, and nice-to-haves…"></textarea><span class="upload-control"><input class="file-input" data-target="job-description" type="file" accept=".pdf,.txt,.md,application/pdf,text/plain,text/markdown" /><b>Attach PDF or text file</b></span></label>
             </div>
           </div>
           <aside class="roster"><div class="roster-title"><div><p class="eyebrow">Panel roster</p><h3>Four seats, four lenses</h3></div><span class="live-pill">ready</span></div><div class="roster-list"><article><span class="persona-dot violet"></span><div><b>Ari Chen</b><small>Technical depth</small></div><em>01</em></article><article><span class="persona-dot sky"></span><div><b>Maya Patel</b><small>People &amp; culture</small></div><em>02</em></article><article><span class="persona-dot amber"></span><div><b>Jon Bell</b><small>Role &amp; impact</small></div><em>03</em></article><article><span class="persona-dot coral"></span><div><b>Noor Khan</b><small>Risk &amp; evidence</small></div><em>04</em></article></div><div class="roster-note"><span>⊕</span><p>Every reviewer sees the same source material—but no peer conclusions until deliberation.</p></div></aside>
@@ -54,8 +56,8 @@
       </section>
     </main>
     <template id="report-template">
-      <div class="decision-card"><div><p class="eyebrow">Final recommendation</p><h2 class="decision-label"></h2><p class="decision-rationale"></p></div><div class="confidence"><span>Confidence</span><strong></strong><div class="confidence-track"><i></i></div></div></div>
-      <div class="profile-card"><div class="profile-header"><div><p class="eyebrow">Candidate profile</p><h3 class="candidate-name"></h3></div><p class="headline"></p></div><div class="fact-columns"><div><h4>Supported skills</h4><ul class="skills-list"></ul></div><div><h4>Claims to validate</h4><ul class="claims-list"></ul></div></div></div>
+      <div class="decision-card"><div><p class="eyebrow">Final recommendation</p><h2 class="decision-label"></h2><p class="role-fit"></p><p class="decision-rationale"></p></div><div class="confidence"><span>Confidence</span><strong></strong><div class="confidence-track"><i></i></div></div></div>
+      <div class="profile-card"><div class="profile-header"><div><p class="eyebrow">Candidate profile</p><h3 class="candidate-name"></h3></div><p class="headline"></p></div><div class="fact-columns"><div><h4>Supported skills</h4><ul class="skills-list"></ul></div><div><h4>Role requirements</h4><ul class="requirements-list"></ul></div><div><h4>Claims to validate</h4><ul class="claims-list"></ul></div></div></div>
       <div class="report-section"><div class="section-title"><p class="eyebrow">Independent opinions</p><h3>Four lenses. No groupthink.</h3><p>Each opinion was generated in a separate call before the panel debate.</p></div><div class="opinion-grid"></div></div>
       <div class="debate-card"><div class="debate-heading"><div><p class="eyebrow">Panel debate</p><h3 class="debate-summary"></h3></div><button class="voice-button" type="button" data-action="voice">♬ Play debate</button></div><div class="exchange-list"></div><div class="unresolved-box"><b>Still unresolved</b><ul></ul></div></div>
       <div class="closing-grid"><article><p class="eyebrow">Strengths</p><ul class="strengths-list"></ul></article><article><p class="eyebrow">Concerns</p><ul class="concerns-list"></ul></article><article><p class="eyebrow">Next step</p><p class="next-step"></p><div class="factors"></div></article></div>
