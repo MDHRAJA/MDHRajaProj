@@ -4,11 +4,11 @@ An evidence-led multi-agent interview panel simulator. It builds one candidate p
 
 ## Run locally
 
-1. Copy `.env.example` to `.env` and add an `OPENAI_API_KEY`.
+1. Copy `.env.example` to `.env`, choose `AI_PROVIDER`, and add its server-side API key.
 2. Run `node server.js`.
 3. Open `http://localhost:3000`.
 
-The API key remains server-side. The app expects pasted material or `.txt`/`.md` files for a resume and transcript.
+Both OpenAI and Gemini are supported. The API key remains server-side. The app expects pasted material or `.txt`/`.md` files for a resume and transcript.
 
 ## Deliberation guarantee
 
