@@ -161,7 +161,7 @@ function renderSlate(data) {
   });
 }
 
-function personaName(id) { return { technical: "Ari Chen · Technical", culture: "Maya Patel · Culture", manager: "Jon Bell · Manager", skeptic: "Noor Khan · Skeptic" }[id] || id || "Panelist"; }
+function personaName(id) { return { technical: "Vikramaditya Motwane · Technical", culture: "Manasvi Kamble · Culture", manager: "Anirudh Ravichander · Manager", skeptic: "Kalyani Iyer · Skeptic" }[id] || id || "Panelist"; }
 function voteMarkup(value = "") { const label = value.replaceAll("_", " ") || "not recorded"; const tone = /strong_hire|strong_yes|^hire$|^yes$/.test(value) ? "yes" : /no|do_not_hire/.test(value) ? "no" : "mixed"; return `<span class="vote ${tone}">${escapeHtml(label)}</span>`; }
 
 function setTimeline(stage, complete = false) {
