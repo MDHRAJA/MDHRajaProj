@@ -10,29 +10,42 @@ const sample = {
 const stageCopy = ["Building the shared evidence file…", "Four panelists are reviewing independently…", "Opening the evidence-based debate…", "The hiring chair is weighing the record…"];
 
 $("#load-sample").addEventListener("click", () => {
-  $("#role").value = sample.role; $("#resume").value = sample.resume; $("#transcript").value = sample.transcript; $("#job-description").value = sample.jobDescription;
+  const candidate = document.querySelector("[data-candidate]");
+  $("#role").value = sample.role; candidate.querySelector(".candidate-name").value = "Alex Morgan"; candidate.querySelector(".candidate-resume").value = sample.resume; candidate.querySelector(".candidate-transcript").value = sample.transcript; $("#job-description").value = sample.jobDescription;
   updateBriefStatus();
   document.querySelector(".workspace").scrollIntoView({ behavior: "smooth", block: "start" });
 });
 
-document.querySelectorAll(".file-input").forEach(input => input.addEventListener("change", async event => {
-  const file = event.target.files?.[0];
+document.addEventListener("change", async event => {
+  if (!event.target.matches(".file-input")) return;
+  const input = event.target;
+  const file = input.files?.[0];
   if (!file) return;
-  const label = event.target.parentElement.querySelector("b");
+  const label = input.parentElement.querySelector("b");
   try {
     label.textContent = file.name.endsWith(".pdf") ? "Extracting PDF text…" : "Reading file…";
     const content = file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf") ? await extractPdfText(file) : await file.text();
     if (!content.trim()) throw new Error("No readable text was found in this file.");
-    $("#" + event.target.dataset.target).value = content;
+    const target = input.dataset.target ? $("#" + input.dataset.target) : input.closest("[data-candidate]").querySelector(`.candidate-${input.dataset.field}`);
+    target.value = content;
     label.textContent = `${file.name} · ready`;
     updateBriefStatus();
   } catch (error) { label.textContent = "Could not read this file"; alert(error.message || "This file could not be read. Try copying its text into the field instead."); }
-}));
-document.querySelectorAll("#role, #resume, #transcript, #job-description").forEach(input => input.addEventListener("input", updateBriefStatus));
+});
+document.addEventListener("input", event => { if (event.target.matches("#role, #job-description, #hiring-count, .candidate-name, .candidate-resume, .candidate-transcript")) updateBriefStatus(); });
+
+$("#add-candidate").addEventListener("click", () => {
+  const count = document.querySelectorAll("[data-candidate]").length + 1;
+  const card = document.createElement("article"); card.className = "candidate-card"; card.dataset.candidate = "";
+  card.innerHTML = `<header><span>Candidate ${String(count).padStart(2, "0")}</span><div><input class="candidate-name" placeholder="Candidate name (optional)" autocomplete="off" /><button type="button" class="remove-candidate">Remove</button></div></header><div class="materials-grid"><label class="field material"><span>Resume <small>paste text or load PDF/text</small></span><textarea class="candidate-resume" placeholder="Paste the candidate's resume…"></textarea><span class="upload-control"><input class="file-input" data-field="resume" type="file" accept=".pdf,.txt,.md,application/pdf,text/plain,text/markdown" /><b>Attach PDF or text file</b></span></label><label class="field material"><span>Interview transcript <small>paste text or load PDF/text</small></span><textarea class="candidate-transcript" placeholder="Paste the interview transcript…"></textarea><span class="upload-control"><input class="file-input" data-field="transcript" type="file" accept=".pdf,.txt,.md,application/pdf,text/plain,text/markdown" /><b>Attach PDF or text file</b></span></label></div>`;
+  $("#candidate-stack").append(card); updateBriefStatus(); card.scrollIntoView({ behavior: "smooth", block: "center" });
+});
+document.addEventListener("click", event => { if (event.target.matches(".remove-candidate")) { event.target.closest("[data-candidate]").remove(); renumberCandidates(); updateBriefStatus(); } });
 
 $("#run-panel").addEventListener("click", async () => {
-  const payload = { role: $("#role").value.trim(), resume: $("#resume").value.trim(), transcript: $("#transcript").value.trim(), jobDescription: $("#job-description").value.trim() };
-  if (!payload.role || !payload.resume || !payload.transcript || !payload.jobDescription) { alert("Add the target role, resume, interview transcript, and detailed job description first."); return; }
+  const candidates = [...document.querySelectorAll("[data-candidate]")].map((card, index) => ({ name: card.querySelector(".candidate-name").value.trim() || `Candidate ${index + 1}`, resume: card.querySelector(".candidate-resume").value.trim(), transcript: card.querySelector(".candidate-transcript").value.trim() }));
+  const payload = { role: $("#role").value.trim(), jobDescription: $("#job-description").value.trim(), hiringCount: Number($("#hiring-count").value), candidates };
+  if (!payload.role || !payload.jobDescription || candidates.some(candidate => !candidate.resume || !candidate.transcript)) { alert("Add the target role, detailed job description, and resume + transcript for every candidate first."); return; }
   const results = $("#results"), button = $("#run-panel"), status = $("#status"), timeline = $("#run-timeline");
   results.classList.remove("hidden"); results.scrollIntoView({ behavior: "smooth", block: "start" }); button.disabled = true; $("#report").innerHTML = "";
   timeline.classList.remove("hidden"); let stage = 0; setTimeline(stage); status.innerHTML = `<span class="pulse"></span><span>${stageCopy[stage]}</span>`;
@@ -46,6 +59,7 @@ $("#run-panel").addEventListener("click", async () => {
 });
 
 function renderReport(data) {
+  if (data.mode === "slate") { renderSlate(data); return; }
   const fragment = $("#report-template").content.cloneNode(true), decision = data.decision, profile = data.profile;
   const label = decision.recommendation.replaceAll("_", " ");
   fragment.querySelector(".decision-label").textContent = label; fragment.querySelector(".decision-rationale").textContent = decision.rationale;
@@ -71,8 +85,20 @@ document.addEventListener("click", event => {
 });
 
 function updateBriefStatus() {
-  const filled = [$("#role").value, $("#resume").value, $("#transcript").value, $("#job-description").value].filter(value => value.trim()).length;
-  $("#brief-status").textContent = filled === 4 ? "Brief complete · ready to convene" : `${filled}/4 materials ready`;
+  const candidates = [...document.querySelectorAll("[data-candidate]")]; const ready = candidates.filter(card => card.querySelector(".candidate-resume").value.trim() && card.querySelector(".candidate-transcript").value.trim()).length;
+  const baseReady = $("#role").value.trim() && $("#job-description").value.trim();
+  $("#brief-status").textContent = baseReady && ready === candidates.length ? `${ready} candidate${ready === 1 ? "" : "s"} ready · ${$("#hiring-count").value} opening${Number($("#hiring-count").value) === 1 ? "" : "s"}` : `${ready}/${candidates.length} candidates ready`;
+}
+
+function renumberCandidates() { document.querySelectorAll("[data-candidate]").forEach((card, index) => card.querySelector("header > span").textContent = `Candidate ${String(index + 1).padStart(2, "0")}`); }
+
+function renderSlate(data) {
+  const fragment = $("#slate-template").content.cloneNode(true), slate = data.selection;
+  fragment.querySelector(".selected-count").textContent = slate.selected_candidates.length; fragment.querySelector(".slate-summary").textContent = slate.rationale; fragment.querySelector(".slate-seats strong").textContent = data.hiring_count;
+  const chart = fragment.querySelector(".comparison-chart");
+  (slate.comparison || []).forEach(item => { const row = document.createElement("article"); row.innerHTML = `<div><b>${escapeHtml(item.candidate_name)}</b><span>Rank #${item.rank}</span></div><div class="score-bars"><p><span>Readiness</span><i style="width:${item.readiness}%"></i><b>${item.readiness}</b></p><p><span>Role fit</span><i style="width:${item.role_fit}%"></i><b>${item.role_fit}</b></p><p class="risk"><span>Risk</span><i style="width:${item.risk}%"></i><b>${item.risk}</b></p></div><small>${escapeHtml(item.summary)}</small>`; chart.append(row); });
+  const shortlist = fragment.querySelector(".shortlist-grid"); (slate.selected_candidates || []).forEach(item => { const card = document.createElement("article"); card.innerHTML = `<span>Hire-ready · rank #${item.rank}</span><h4>${escapeHtml(item.candidate_name)}</h4><p>${escapeHtml(item.rationale)}</p><b>Suggested next step</b><p>${escapeHtml(item.next_step)}</p>`; shortlist.append(card); });
+  list(fragment.querySelector(".slate-risk ul"), slate.unresolved_tradeoffs); $("#report").replaceChildren(fragment);
 }
 
 function setTimeline(stage, complete = false) {
