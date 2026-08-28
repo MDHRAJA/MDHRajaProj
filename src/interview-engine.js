@@ -5,7 +5,7 @@ const PERSONAS = [
   { id: "skeptic", name: "Noor Khan", role: "Evidence skeptic", focus: "contradictions, unsupported claims, gaps, exaggeration, and unanswered risks", color: "coral" }
 ];
 
-const evidenceRule = `Every substantive observation must cite an exact quote or a concrete fact from the provided resume or transcript. Do not invent experience. If evidence is missing, say so explicitly.`;
+const evidenceRule = `Every statement about the candidate must cite an exact quote or concrete fact from the provided resume or transcript. Every statement about role fit must cite a specific job-description requirement. Do not invent experience or requirements. If evidence is missing, say so explicitly.`;
 
 function clean(value, limit = 50000) {
   return String(value || "").trim().slice(0, limit);
@@ -70,14 +70,14 @@ async function requestGemini(config, model, instructions, input) {
   return parseJson(text);
 }
 
-function commonInput({ role, resume, transcript }) {
-  return `Target role: ${role}\n\nRESUME:\n${resume}\n\nINTERVIEW TRANSCRIPT:\n${transcript}`;
+function commonInput({ role, resume, transcript, jobDescription }) {
+  return `Target role: ${role}\n\nDETAILED JOB DESCRIPTION:\n${jobDescription}\n\nRESUME:\n${resume}\n\nINTERVIEW TRANSCRIPT:\n${transcript}`;
 }
 
 async function buildProfile(input, config) {
   const prompt = commonInput(input);
   return callModel(config,
-    `You are a careful candidate-profile analyst. Extract only supported facts from the candidate material. ${evidenceRule} Return valid JSON only: {"candidate_name":"string","headline":"string","skills":[{"name":"string","evidence":"quote or fact"}],"experience":[{"summary":"string","evidence":"quote or fact"}],"claims":[{"claim":"string","evidence":"quote or fact"}],"open_questions":["string"]}.`,
+    `You are a careful candidate-profile analyst. Extract only supported candidate facts and the role requirements from the job description. ${evidenceRule} Return valid JSON only: {"candidate_name":"string","headline":"string","skills":[{"name":"string","evidence":"quote or fact"}],"experience":[{"summary":"string","evidence":"quote or fact"}],"claims":[{"claim":"string","evidence":"quote or fact"}],"role_requirements":[{"requirement":"string","evidence":"job-description quote or fact"}],"open_questions":["string"]}.`,
     prompt
   );
 }
@@ -85,7 +85,7 @@ async function buildProfile(input, config) {
 async function independentOpinion(persona, input, profile, config) {
   // This call deliberately receives no peer opinions. Promise.all below makes the isolation explicit.
   return callModel(config,
-    `You are ${persona.name}, the ${persona.role} on an AI interview panel. Assess ${persona.focus}. You are working independently: you cannot see any other panelist's view and must not speculate about it. ${evidenceRule} Give a calibrated recommendation, not just a score. Return valid JSON only: {"persona":"${persona.id}","recommendation":"strong_yes|yes|mixed|no","confidence":0-100,"summary":"string","strengths":[{"point":"string","evidence":"exact quote or fact"}],"concerns":[{"point":"string","evidence":"exact quote or fact"}],"follow_up":"string"}.`,
+    `You are ${persona.name}, the ${persona.role} on an AI interview panel. Assess ${persona.focus} against the detailed job description. You are working independently: you cannot see any other panelist's view and must not speculate about it. ${evidenceRule} Give a calibrated recommendation, not just a score. Return valid JSON only: {"persona":"${persona.id}","recommendation":"strong_yes|yes|mixed|no","confidence":0-100,"summary":"string","strengths":[{"point":"string","evidence":"candidate quote/fact + requirement"}],"concerns":[{"point":"string","evidence":"candidate quote/fact + requirement"}],"follow_up":"string"}.`,
     `${commonInput(input)}\n\nSHARED CANDIDATE PROFILE:\n${JSON.stringify(profile)}`
   );
 }
@@ -99,14 +99,14 @@ async function debate(input, profile, opinions, config) {
 
 async function finalDecision(input, profile, opinions, panelDebate, config) {
   return callModel(config,
-    `You are the hiring chair. Make the final decision using the evidence, not a mathematical average. Explicitly weigh evidence quality, relevance to the target role, confidence, and unresolved risks. A skeptical concern with strong source support may outweigh several weak positives. ${evidenceRule} Return valid JSON only: {"recommendation":"strong_hire|hire|hold|do_not_hire","confidence":0-100,"rationale":"string","strengths":["string"],"concerns":["string"],"unresolved_disagreements":["string"],"next_step":"string","decision_factors":[{"factor":"string","weight":"high|medium|low","reason":"string"}]}.`,
+    `You are the hiring chair. Make the final decision using the evidence, not a mathematical average. Explicitly weigh evidence quality, match against the detailed job description, relevance to the target role, confidence, and unresolved risks. A skeptical concern with strong source support may outweigh several weak positives. ${evidenceRule} Return valid JSON only: {"recommendation":"strong_hire|hire|hold|do_not_hire","confidence":0-100,"role_alignment":"strong|partial|weak","role_fit_summary":"string","rationale":"string","strengths":["string"],"concerns":["string"],"unresolved_disagreements":["string"],"next_step":"string","decision_factors":[{"factor":"string","weight":"high|medium|low","reason":"string"}]}.`,
     `${commonInput(input)}\n\nPROFILE:\n${JSON.stringify(profile)}\n\nINDEPENDENT OPINIONS:\n${JSON.stringify(opinions)}\n\nDEBATE:\n${JSON.stringify(panelDebate)}`
   );
 }
 
 export async function runPanel(payload, config) {
-  const input = { role: clean(payload.role, 300), resume: clean(payload.resume), transcript: clean(payload.transcript) };
-  if (!input.role || !input.resume || !input.transcript) throw new Error("Add a target role, resume, and interview transcript before starting the panel.");
+  const input = { role: clean(payload.role, 300), resume: clean(payload.resume), transcript: clean(payload.transcript), jobDescription: clean(payload.jobDescription) };
+  if (!input.role || !input.resume || !input.transcript || !input.jobDescription) throw new Error("Add a target role, detailed job description, resume, and interview transcript before starting the panel.");
   const profile = await buildProfile(input, config);
   const opinions = await Promise.all(PERSONAS.map(persona => independentOpinion(persona, input, profile, config)));
   const panelDebate = await debate(input, profile, opinions, config);
